@@ -459,6 +459,7 @@ npm install -g @anthropic-ai/claude-code
 # Авторизация
 claude auth login
 ```
+<img width="1578" height="994" alt="Ghostty_27_December_2025_gAcpHg2c" src="https://github.com/user-attachments/assets/a4e2066d-fccb-4b6b-ba8d-8929c0709cc5" />
 
 ---
 

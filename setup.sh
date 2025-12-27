@@ -129,7 +129,7 @@ check_os() {
         . /etc/os-release
         if [[ "$ID" != "ubuntu" && "$ID" != "debian" ]]; then
             warn "This script is tested on Ubuntu/Debian. You're running: $ID"
-            read -p "Continue anyway? (y/N): " -r
+            read -p "Continue anyway? (y/N): " -r REPLY < /dev/tty
             if [[ ! $REPLY =~ ^[Yy]$ ]]; then
                 exit 1
             fi
@@ -245,7 +245,7 @@ clone_repository() {
 
     if [ -d "$PROJECT_DIR" ]; then
         warn "Project directory already exists: $PROJECT_DIR"
-        read -p "Remove and re-clone? (y/N): " -r
+        read -p "Remove and re-clone? (y/N): " -r REPLY < /dev/tty
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             rm -rf "$PROJECT_DIR"
         else
@@ -256,7 +256,7 @@ clone_repository() {
     fi
 
     ask "Enter your GitHub username (the one where you forked the repo):"
-    read -r GITHUB_USER
+    read -r GITHUB_USER < /dev/tty
 
     if [ -z "$GITHUB_USER" ]; then
         error "GitHub username cannot be empty"
@@ -293,7 +293,7 @@ collect_tokens() {
     # Telegram Bot Token
     while true; do
         ask "Telegram Bot Token (from @BotFather):"
-        read -r TELEGRAM_BOT_TOKEN
+        read -r TELEGRAM_BOT_TOKEN < /dev/tty
         if validate_telegram_token "$TELEGRAM_BOT_TOKEN"; then
             success "Token format valid"
             break
@@ -305,7 +305,7 @@ collect_tokens() {
     # Telegram User ID
     while true; do
         ask "Your Telegram User ID (from @userinfobot):"
-        read -r TELEGRAM_USER_ID
+        read -r TELEGRAM_USER_ID < /dev/tty
         if validate_telegram_id "$TELEGRAM_USER_ID"; then
             success "User ID valid"
             break
@@ -317,7 +317,7 @@ collect_tokens() {
     # Deepgram API Key
     while true; do
         ask "Deepgram API Key (from console.deepgram.com):"
-        read -r DEEPGRAM_API_KEY
+        read -r DEEPGRAM_API_KEY < /dev/tty
         if validate_deepgram_key "$DEEPGRAM_API_KEY"; then
             success "API Key format valid"
             break
@@ -329,7 +329,7 @@ collect_tokens() {
     # Todoist API Token
     while true; do
         ask "Todoist API Token (from Settings > Integrations > Developer):"
-        read -r TODOIST_API_KEY
+        read -r TODOIST_API_KEY < /dev/tty
         if validate_todoist_key "$TODOIST_API_KEY"; then
             success "API Token format valid"
             break
@@ -346,7 +346,7 @@ create_env_file() {
 
     if [ -f "$ENV_FILE" ]; then
         warn ".env file already exists"
-        read -p "Overwrite? (y/N): " -r
+        read -p "Overwrite? (y/N): " -r REPLY < /dev/tty
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             success "Keeping existing .env"
             return
@@ -436,7 +436,7 @@ configure_git_remote() {
     git config user.email "bot@localhost"
 
     ask "Do you want to configure GitHub push access? (for auto-sync)"
-    read -p "(y/N): " -r
+    read -p "(y/N): " -r REPLY < /dev/tty
 
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         warn "Skipping GitHub push configuration"
@@ -451,7 +451,7 @@ configure_git_remote() {
     echo ""
 
     ask "Enter your GitHub Personal Access Token:"
-    read -rs GITHUB_TOKEN
+    read -rs GITHUB_TOKEN < /dev/tty
     echo ""
 
     if [ -z "$GITHUB_TOKEN" ]; then
@@ -463,7 +463,7 @@ configure_git_remote() {
 
     if [ -z "$GITHUB_USER" ]; then
         ask "Enter your GitHub username:"
-        read -r GITHUB_USER
+        read -r GITHUB_USER < /dev/tty
     fi
 
     git remote set-url origin "https://$GITHUB_TOKEN@github.com/$GITHUB_USER/agent-second-brain.git"
@@ -609,7 +609,7 @@ main() {
     echo "  5. Set up auto-start service"
     echo ""
 
-    read -p "Ready to start? (Y/n): " -r
+    read -p "Ready to start? (Y/n): " -r REPLY < /dev/tty
     if [[ $REPLY =~ ^[Nn]$ ]]; then
         echo "Setup cancelled."
         exit 0

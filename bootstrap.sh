@@ -36,11 +36,16 @@ GITHUB_USER="${1:-}"
 
 if [ -z "$GITHUB_USER" ]; then
     echo -e "${CYAN}Enter your GitHub username (where you forked the repo):${NC}"
-    read -r GITHUB_USER
+    # Read from /dev/tty to handle curl | bash case
+    read -r GITHUB_USER < /dev/tty
 fi
 
 if [ -z "$GITHUB_USER" ]; then
     echo -e "${RED}[X] GitHub username is required${NC}"
+    echo ""
+    echo "Usage:"
+    echo "  curl -fsSL URL | bash -s YOUR_GITHUB_USER"
+    echo "  Example: curl -fsSL URL | bash -s smixs"
     exit 1
 fi
 

@@ -112,6 +112,8 @@ Each phase produces a clean JSON that the next phase picks up. If something brea
 Telegram → Deepgram → Claude Code → Todoist + Obsidian vault → Telegram report
 ```
 
+**Always-on, on your subscription.** The bot doesn't spawn a fresh `claude` for every message. It keeps one long-lived *interactive* Claude Code session alive in a tmux pane and types your prompts into it. That keeps it on your Claude subscription (interactive usage) instead of per-request API billing. A watchdog and a daily self-check keep that session healthy around the clock and restart it automatically if it ever wedges — so the bot just stays up.
+
 ## What it costs
 
 | Service | Cost |
@@ -123,6 +125,8 @@ Telegram → Deepgram → Claude Code → Todoist + Obsidian vault → Telegram 
 | **Total** | **~$25/mo** |
 
 $25/month for a personal assistant that organizes your life, never sleeps, and gets better the more you use it.
+
+> **Why this matters (June 2026).** From June 15, 2026 Anthropic moves `claude -p` / headless runs onto a separate paid Agent SDK credit, billed per request. Agent Second Brain **v3.1** sidesteps that completely: it drives a persistent *interactive* session, which stays on your flat Pro/Max subscription. No per-request billing, no surprise invoice — the price above stays the price. (If you ever do want the API path, an opt-in `DBRAIN_MODE=router` escape hatch is built in.)
 
 ## Quick start
 
@@ -164,6 +168,15 @@ curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/agent-second-brain/ma
 ```
 
 That's it. The bot starts, you send it a message, and the system is alive.
+
+### Already running an older version?
+
+Upgrading an existing v2 / v3.0 install to the persistent-session architecture is one idempotent command — it installs tmux, pulls the new code, migrates the systemd services, and runs a health check:
+
+```bash
+ssh your-server
+cd agent-second-brain && bash upgrade.sh
+```
 
 ---
 

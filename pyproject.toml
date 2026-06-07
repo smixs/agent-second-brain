@@ -1,6 +1,6 @@
 [project]
 name = "agent-second-brain"
-version = "1.0.0"
+version = "3.1.0"
 description = "Voice-first personal assistant for Telegram with Obsidian and Todoist integration"
 readme = "README.md"
 authors = [

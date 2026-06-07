@@ -4,7 +4,7 @@ requires-python = ">=3.12"
 
 [[package]]
 name = "agent-second-brain"
-version = "1.0.0"
+version = "3.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiogram" },

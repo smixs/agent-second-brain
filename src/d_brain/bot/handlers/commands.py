@@ -1,4 +1,4 @@
-"""Command handlers for /start, /help, /status."""
+"""Command handlers for /start, /help, /status, /new, /compact."""
 
 from datetime import date
 
@@ -8,6 +8,7 @@ from aiogram.types import Message
 
 from d_brain.bot.keyboards import get_main_keyboard
 from d_brain.config import get_settings
+from d_brain.services.chat_session import ChatSessionManager
 from d_brain.services.session import SessionStore
 from d_brain.services.storage import VaultStorage
 
@@ -18,17 +19,15 @@ router = Router(name="commands")
 async def cmd_start(message: Message) -> None:
     """Handle /start command."""
     await message.answer(
-        "<b>d-brain</b> - твой голосовой дневник\n\n"
-        "Отправляй мне:\n"
-        "🎤 Голосовые сообщения\n"
-        "💬 Текст\n"
-        "📷 Фото\n"
-        "↩️ Пересланные сообщения\n\n"
-        "Всё будет сохранено и обработано.\n\n"
+        "<b>d-brain</b> — персональный ассистент\n\n"
+        "Просто пиши мне — я отвечу.\n"
+        "Голосовые, текст, фото, пересланные — всё принимаю.\n\n"
         "<b>Команды:</b>\n"
-        "/status - статус сегодняшнего дня\n"
-        "/process - обработать записи\n"
-        "/help - справка",
+        "/new — новый чат\n"
+        "/compact — сжать контекст\n"
+        "/status — статус дня\n"
+        "/process — обработать записи\n"
+        "/help — справка",
         reply_markup=get_main_keyboard(),
     )
 
@@ -37,16 +36,15 @@ async def cmd_start(message: Message) -> None:
 async def cmd_help(message: Message) -> None:
     """Handle /help command."""
     await message.answer(
-        "<b>Как использовать d-brain:</b>\n\n"
-        "1. Отправь голосовое — я транскрибирую и сохраню\n"
-        "2. Отправь текст — сохраню как есть\n"
-        "3. Отправь фото — сохраню в attachments\n"
-        "4. Перешли сообщение — сохраню с источником\n\n"
-        "Вечером используй /process для обработки:\n"
-        "Мысли → Obsidian\n\n"
+        "<b>d-brain — персональный ассистент</b>\n\n"
+        "Просто отправляй что угодно — Claude обработает и ответит.\n\n"
+        "🎤 Голосовое — транскрибирую и обработаю\n"
+        "💬 Текст — обработаю как есть\n\n"
         "<b>Команды:</b>\n"
-        "/status - сколько записей сегодня\n"
-        "/process - обработать записи"
+        "/new — новый чат (сброс сессии)\n"
+        "/compact — сжать контекст сессии\n"
+        "/status — статус сегодняшнего дня\n"
+        "/process — обработать записи дня"
     )
 
 
@@ -95,3 +93,36 @@ async def cmd_status(message: Message) -> None:
         f"- ↩️ Пересланных: {forward_count}"
         f"{week_stats}"
     )
+
+
+@router.message(Command("new"))
+async def cmd_new(message: Message) -> None:
+    """Start fresh Claude session."""
+    if not message.from_user:
+        return
+
+    settings = get_settings()
+    manager = ChatSessionManager(settings.vault_path)
+    manager.reset(message.from_user.id)
+
+    await message.answer("Новая сессия. Контекст очищен.")
+
+
+@router.message(Command("compact"))
+async def cmd_compact(message: Message) -> None:
+    """Compact current session context."""
+    if not message.from_user:
+        return
+
+    settings = get_settings()
+    manager = ChatSessionManager(settings.vault_path)
+
+    await message.chat.do(action="typing")
+    summary = await manager.compact(message.from_user.id)
+
+    if summary and len(summary) > 500:
+        summary_text = summary[:500] + "..."
+    else:
+        summary_text = summary or "No summary."
+
+    await message.answer(f"Контекст сжат.\n\n<i>{summary_text}</i>")

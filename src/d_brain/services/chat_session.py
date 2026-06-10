@@ -32,11 +32,9 @@ class ChatSessionManager:
     def __init__(
         self,
         vault_path: Path | str,
-        todoist_api_key: str = "",
         session: Any | None = None,
     ) -> None:
         self.vault_path = Path(vault_path)
-        self.todoist_api_key = todoist_api_key
         self._session = session if session is not None else get_session(get_settings())
 
     async def send_message(self, user_id: int, prompt: str) -> str:

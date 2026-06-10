@@ -30,12 +30,9 @@ def create_dispatcher() -> Dispatcher:
     """Create and configure the dispatcher with routers."""
     from d_brain.bot.handlers import (
         buttons,
+        chat,
         commands,
-        forward,
-        photo,
         process,
-        text,
-        voice,
     )
 
     dp = Dispatcher(storage=MemoryStorage())
@@ -44,10 +41,7 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(commands.router)
     dp.include_router(process.router)
     dp.include_router(buttons.router)  # Reply keyboard buttons
-    dp.include_router(voice.router)
-    dp.include_router(photo.router)
-    dp.include_router(forward.router)
-    dp.include_router(text.router)  # Must be last (catch-all for text)
+    dp.include_router(chat.router)  # Catch-all for private chat (LAST)
     return dp
 
 

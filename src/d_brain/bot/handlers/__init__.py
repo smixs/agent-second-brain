@@ -2,20 +2,14 @@
 
 from d_brain.bot.handlers import (
     buttons,
+    chat,
     commands,
-    forward,
-    photo,
     process,
-    text,
-    voice,
 )
 
 __all__ = [
     "buttons",
+    "chat",
     "commands",
-    "forward",
-    "photo",
     "process",
-    "text",
-    "voice",
 ]

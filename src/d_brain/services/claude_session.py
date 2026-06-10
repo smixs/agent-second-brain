@@ -9,8 +9,9 @@ All access to the pane goes through a single cross-process file lock
 (`pane.lock`) so the bot, the daily pipeline and the watchdog never talk to
 the pane at once. The watchdog recovers a wedged session via
 ``force_recover()`` (non-blocking lock), and ``ask()`` self-detects a stall
-(no new bytes in pane.log) so it releases the lock quickly instead of
-holding it for the full timeout.
+(no visible turn — the working spinner gone without completion) so it
+releases the lock quickly instead of holding it for the full timeout.
+Silence is NOT a hang signal: a long quiet task still shows the spinner.
 
 Pure text parsing lives in tmux_parse; this module only orchestrates tmux
 and timing, so it is tested with a fake runner + injected clock/sleep/rid.
@@ -37,6 +38,7 @@ from d_brain.services.tmux_parse import (
     extract_reply,
     is_complete,
     is_idle,
+    is_working,
     strip_chrome,
 )
 
@@ -88,7 +90,6 @@ class ClaudeSession:
         sleep_fn: Callable[[float], None] = time.sleep,
         clock_fn: Callable[[], float] = time.monotonic,
         rid_factory: Callable[[], str] | None = None,
-        liveness_fn: Callable[[], float] | None = None,
         poll_interval: float = 1.0,
         paste_settle: float = 0.3,
         startup_timeout: float = 90.0,
@@ -108,7 +109,6 @@ class ClaudeSession:
         self._sleep = sleep_fn
         self._clock = clock_fn
         self._rid_factory = rid_factory or (lambda: uuid.uuid4().hex[:8])
-        self._liveness_fn = liveness_fn or self._pane_log_mtime
         self._poll_interval = poll_interval
         self._paste_settle = paste_settle
         self._startup_timeout = startup_timeout
@@ -156,12 +156,6 @@ class ClaudeSession:
 
     def _interrupt(self) -> None:
         self._tmux("send-keys", "-t", self._target, "C-c")
-
-    def _pane_log_mtime(self) -> float:
-        try:
-            return self._pane_log.stat().st_mtime
-        except OSError:
-            return 0.0
 
     # ── file lock (single lock; see module docstring) ────────────────
 
@@ -257,6 +251,10 @@ class ClaudeSession:
     def current_state(self) -> PaneState:
         """Classify the live pane (for the watchdog / doctor)."""
         return classify_state(self._capture())
+
+    def is_working(self) -> bool:
+        """True iff the pane shows an active turn (for the watchdog)."""
+        return is_working(self._capture())
 
     def force_recover(self) -> bool:
         """Watchdog entry point: take the lock non-blocking; if free, kill and
@@ -365,8 +363,7 @@ class ClaudeSession:
             self._inflight.write_text(f"{log_id}\n{self._clock()}\n")
             self._send_prompt(prompt, rid, wrap=wrap)
 
-            last_live = self._liveness_fn()
-            last_change = self._clock()
+            last_active = self._clock()
             deadline = self._clock() + timeout
             idle_streak = 0
             while self._clock() < deadline:
@@ -390,13 +387,15 @@ class ClaudeSession:
                 else:
                     idle_streak = 0
 
-                live = self._liveness_fn()
-                if live != last_live:
-                    last_live, last_change = live, self._clock()
-                elif self._clock() - last_change > self._stall_timeout:
+                # Stall model: silence is NOT a hang signal — a quiet task
+                # still shows the working spinner. Stuck == no visible turn
+                # (and no completion) for longer than stall_timeout.
+                if is_working(cap):
+                    last_active = self._clock()
+                elif self._clock() - last_active > self._stall_timeout:
                     self._interrupt()
                     # leave inflight as an orphan/stuck signal for the watchdog
-                    return AskResult("error", detail="session stalled (no output)")
+                    return AskResult("error", detail="session stalled (no active turn)")
                 self._sleep(self._poll_interval)
 
             # timed out: prompt is still physically in the pane → keep inflight

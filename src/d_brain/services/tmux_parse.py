@@ -150,6 +150,16 @@ def strip_chrome(text: str) -> str:
     return "\n".join(kept).strip()
 
 
+def is_working(text: str) -> bool:
+    """True iff the pane shows an ACTIVE turn (the working spinner).
+
+    The shared liveness predicate for ask()'s stall detector and the
+    watchdog: silence is not a hang signal — a long task that prints nothing
+    still shows '(esc to interrupt)'. Hung == stuck WITHOUT this marker.
+    """
+    return bool(_WORKING_RE.search(_chrome(text)))
+
+
 def is_idle(text: str) -> bool:
     """True iff the session sits at an idle input prompt (no active turn).
 

@@ -2,7 +2,7 @@
 
 The real tmux/subprocess layer is replaced by FakeTmux, which models the
 pane as a small state machine and returns scripted capture-pane output.
-Clock, sleep, rid generation and liveness are injected so polling, timeout
+Clock, sleep and rid generation are injected so polling, timeout
 and stall detection are deterministic and fast.
 """
 
@@ -81,7 +81,6 @@ def make_session(
     clock: dict,
     *,
     rid: str = "rid00001",
-    liveness=None,
 ) -> ClaudeSession:
     def sleep_fn(seconds: float) -> None:
         clock["now"] += seconds
@@ -94,7 +93,6 @@ def make_session(
         sleep_fn=sleep_fn,
         clock_fn=lambda: clock["now"],
         rid_factory=lambda: rid,
-        liveness_fn=liveness or (lambda: clock["now"]),  # default: always "fresh"
         poll_interval=1.0,
         startup_timeout=30.0,
         stall_timeout=10.0,
@@ -227,21 +225,32 @@ def test_ask_detects_logged_out(tmp_path, clock):
 
 def test_ask_times_out_when_no_reply(tmp_path, clock):
     fake = FakeTmux([READY, THINKING], exists=True)
-    # liveness keeps advancing (output flowing) so it's a timeout, not a stall
-    s = make_session(tmp_path, fake, clock, liveness=lambda: clock["now"])
+    # the working spinner is visible, so it's a timeout, not a stall
+    s = make_session(tmp_path, fake, clock)
     res = s.ask("ping", timeout=3)
     assert res.status == "timeout"
 
 
 def test_ask_detects_stall_and_interrupts(tmp_path, clock):
-    """No new bytes (frozen liveness) longer than stall_timeout → stall, not
-    a 20-min hang. Must interrupt and return promptly (C1)."""
-    fake = FakeTmux([READY, THINKING], exists=True)
-    s = make_session(tmp_path, fake, clock, liveness=lambda: 42.0)  # frozen
+    """v3.0 stall model: a turn with NO visible work (no 'esc to interrupt'
+    spinner, no markers) longer than stall_timeout is stuck — the prompt got
+    eaten or the turn is waiting on something undrivable. Interrupt promptly."""
+    fake = FakeTmux([READY, READY], exists=True)  # never shows work
+    s = make_session(tmp_path, fake, clock)
     res = s.ask("ping", timeout=600)
     assert res.status == "error"
     assert "stall" in (res.detail or "").lower()
     assert any(c[-1] == "C-c" for c in fake.sent_keys())
+
+
+def test_ask_long_silent_work_not_interrupted(tmp_path, clock):
+    """The working spinner is visible → the turn is ALIVE however quiet it
+    is. No C-c; the hard timeout (not a stall) ends the wait."""
+    fake = FakeTmux([READY, THINKING], exists=True)
+    s = make_session(tmp_path, fake, clock)
+    res = s.ask("ping", timeout=30)
+    assert res.status == "timeout"
+    assert not any(c[-1] == "C-c" for c in fake.sent_keys())
 
 
 def test_ask_returns_error_when_ensure_fails(tmp_path, clock):
@@ -257,7 +266,7 @@ def test_ask_leaves_inflight_orphan_on_timeout(tmp_path, clock):
     """A timed-out prompt is still physically in the pane; inflight marker
     must persist as a stuck-signal (M6)."""
     fake = FakeTmux([READY, THINKING], exists=True)
-    s = make_session(tmp_path, fake, clock, liveness=lambda: clock["now"])
+    s = make_session(tmp_path, fake, clock)
     s.ask("ping", timeout=3)
     assert (tmp_path / ".dbrain" / "inflight").exists()
 

@@ -36,7 +36,7 @@ from d_brain.services.tmux_parse import PaneState
 logger = logging.getLogger(__name__)
 
 DEFAULT_TICK = 15.0
-DEFAULT_STALL_THRESHOLD = 300.0  # 5 min of no pane output ⇒ wedged
+DEFAULT_STALL_THRESHOLD = 300.0  # 5 min stuck without visible work ⇒ wedged
 DEFAULT_MIN_DISK = 500_000_000  # 500 MB
 DEFAULT_ALERT_COOLDOWN = 3600.0  # re-alert a persistent fault at most hourly
 
@@ -75,23 +75,23 @@ class Watchdog:
         self._min_disk = min_disk_bytes
         self._alert_cooldown = alert_cooldown
         self._inflight = self.runtime_dir / "inflight"
-        self._pane_log = self.runtime_dir / "pane.log"
         self._status = self.runtime_dir / "STATUS.md"
         self._last_alert_key: str | None = None
         self._last_alert_ts = 0.0
-
-    def _mtime_age(self, path: Path) -> float:
-        try:
-            return max(0.0, self._clock() - path.stat().st_mtime)
-        except OSError:
-            return float("inf")
+        self._stuck_since: float | None = None
 
     def _is_hung(self, state: PaneState) -> bool:
-        # Serviceable states are never hung. Otherwise hung only if no bytes
-        # are flowing (a long-but-live task keeps pane.log growing).
-        if state in _SERVICEABLE:
+        # Hang model (paired with ask()'s stall detector): silence is NOT a
+        # signal — a long quiet task still shows the working spinner. Hung ==
+        # non-serviceable AND no visible work, PERSISTING past the threshold.
+        if state in _SERVICEABLE or self.session.is_working():
+            self._stuck_since = None
             return False
-        return self._mtime_age(self._pane_log) >= self._stall_threshold
+        now = self._clock()
+        if self._stuck_since is None:
+            self._stuck_since = now
+            return False
+        return now - self._stuck_since >= self._stall_threshold
 
     def _maybe_alert(self, key: str, msg: str) -> None:
         now = self._clock()

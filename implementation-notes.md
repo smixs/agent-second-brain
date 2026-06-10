@@ -103,3 +103,15 @@ TODO: ответы >~экрана читать из pane.log (сейчас captu
   (runtime.py guards with mcp.exists()).
 - Gotcha: goal-aligner agent's sole purpose was todoist↔goals alignment → deleted,
   not trimmed.
+
+## 2026-06-10 — v3.0 T8: liveness pair rewrite
+
+- Decision: stall/hung redefined from "no pane.log bytes" to "no visible turn"
+  (working spinner '(esc to interrupt)' absent). ask() and watchdog share the
+  is_working() predicate; watchdog hung is persistence-based (_stuck_since),
+  not instant — one observation never kills.
+- VERIFY-LIVE: the '(esc to interrupt)' anchor must be confirmed against the
+  live CLI version on ovh1 (like the pane-geometry notes). If the TUI renames
+  the hint, is_working() goes blind — check during smoke.
+- Gotcha: removed liveness_fn/_pane_log_mtime; pane.log stays (pipe-pane log)
+  but is no longer a liveness signal.

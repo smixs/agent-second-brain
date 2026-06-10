@@ -278,12 +278,20 @@ class ClaudeSession:
                 self._ready_flag.unlink(missing_ok=True)
                 self._inflight.unlink(missing_ok=True)
 
-    def clear(self) -> None:
-        """Manual recovery only (durable-state-first: no scheduled clear)."""
+    def send_control(self, text: str) -> None:
+        """Type a client-side Claude Code command verbatim, fire-and-forget.
+
+        Control commands (/clear, /model, …) produce no model turn and thus
+        no marker pair — there is nothing to extract, so don't wait.
+        """
         with self._locked() as got:
             if got:
-                self._send_text("/clear")
+                self._send_text(text)
                 self._send_enter()
+
+    def clear(self) -> None:
+        """Manual recovery only (durable-state-first: no scheduled clear)."""
+        self.send_control("/clear")
 
     # ── sending ──────────────────────────────────────────────────────
 

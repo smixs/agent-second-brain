@@ -33,7 +33,26 @@ router.message.filter(F.chat.type == ChatType.PRIVATE)
 
 MAX_RESPONSE_LENGTH = 4096
 
+# Slash commands split by BEHAVIOR, not by the leading "/":
+# - control: client-side Claude Code commands — no model turn, fire-and-forget
+# - tui: interactive full-screen UIs — undrivable through a typed pane
+# - everything else (incl. /skill-name) is a normal model turn → marker path
+_CONTROL = {"/clear", "/compact", "/model"}
+_TUI_ONLY = {"/agents", "/config", "/login"}
+
 _manager: ChatSessionManager | None = None
+
+
+def classify_command(text: str) -> str:
+    """'control' | 'tui' | 'turn' for an incoming chat text."""
+    if not text.startswith("/"):
+        return "turn"
+    head = text.split(maxsplit=1)[0]
+    if head in _CONTROL:
+        return "control"
+    if head in _TUI_ONLY:
+        return "tui"
+    return "turn"
 
 
 def _get_manager() -> ChatSessionManager:
@@ -43,6 +62,24 @@ def _get_manager() -> ChatSessionManager:
         settings = get_settings()
         _manager = ChatSessionManager(settings.vault_path)
     return _manager
+
+
+async def _dispatch_text(bot: Bot, chat_id: int, user_id: int, text: str) -> None:
+    """Route a text by behavior: control → fire-and-forget; tui → hint;
+    normal turn (incl. /skill-name) → session via the marker path."""
+    kind = classify_command(text)
+    if kind == "control":
+        await _get_manager().send_control(text)
+        await bot.send_message(chat_id, f"⌨️ <code>{html.escape(text)}</code> отправлена в сессию.")
+        return
+    if kind == "tui":
+        await bot.send_message(
+            chat_id,
+            "Эта команда открывает интерактивный интерфейс — доступно только "
+            "через <code>dbrain attach</code> на сервере.",
+        )
+        return
+    await _process_and_reply(bot, chat_id, user_id, text)
 
 
 async def _process_and_reply(bot: Bot, chat_id: int, user_id: int, prompt: str) -> None:
@@ -188,9 +225,14 @@ async def handle_chat_voice(message: Message, bot: Bot) -> None:
         await message.answer(f"Error: {e}")
 
 
-@router.message(F.text, lambda m: not m.text.startswith("/"))
+@router.message(F.text)
 async def handle_chat_text(message: Message, bot: Bot) -> None:
-    """Handle text messages in private chat (excluding commands)."""
+    """Handle text messages in private chat.
+
+    Bot-level commands (/start, /help, …) are intercepted by routers
+    registered earlier; anything that reaches here — including Claude Code
+    slash commands and /skill-name invocations — is dispatched by behavior.
+    """
     if not message.text or not message.from_user:
         return
 
@@ -210,4 +252,4 @@ async def handle_chat_text(message: Message, bot: Bot) -> None:
         msg_id=message.message_id,
     )
 
-    await _process_and_reply(bot, message.chat.id, message.from_user.id, message.text)
+    await _dispatch_text(bot, message.chat.id, message.from_user.id, message.text)

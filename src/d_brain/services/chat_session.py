@@ -50,6 +50,11 @@ class ChatSessionManager:
         logger.warning("session ask for user %d returned %s", user_id, res.status)
         return _STATUS_MESSAGES.get(res.status, _STATUS_MESSAGES["error"])
 
+    async def send_control(self, text: str) -> None:
+        """Fire-and-forget a client-side Claude Code command into the session."""
+        async with get_ask_lock():
+            await asyncio.to_thread(self._session.send_control, text)
+
     def reset(self, user_id: int) -> None:
         """Clear the live session context (durable data in files is kept)."""
         self._session.clear()

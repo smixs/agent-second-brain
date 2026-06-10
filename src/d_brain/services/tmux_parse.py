@@ -104,7 +104,10 @@ _RATE_RE = re.compile(
 )
 _LOGGED_OUT_RE = re.compile(
     r"invalid api key|please run /login|logged out|please log ?in|"
-    r"authentication (failed|required|expired)|session expired",
+    r"authentication (failed|required|expired)|session expired|"
+    # First-run onboarding screens (fresh CLAUDE_CONFIG_DIR): they need a
+    # human, restarts won't help — alert like a logout, don't kill.
+    r"select login method|syntax theme: \w+ \(ctrl\+t to disable\)",
     re.I,
 )
 # READY signals. The bypass footer is our always-present anchor (we launch

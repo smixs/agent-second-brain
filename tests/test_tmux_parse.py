@@ -354,3 +354,26 @@ def test_is_idle_false_on_menu_selector():
         "  ⏵⏵ bypass permissions on (shift+tab to cycle)\n"
     )
     assert not is_idle(pane)
+
+
+def test_classify_login_menu_as_logged_out():
+    """Incident 2026-06-10: a fresh CLAUDE_CONFIG_DIR sent the new process
+    into first-run onboarding (theme → login menu); classify_state saw
+    UNKNOWN and the watchdog stayed silent while every ask timed out. The
+    login/onboarding screens need a human — classify them LOGGED_OUT."""
+    login = (
+        " Claude Code can be used with your Claude subscription or billed "
+        "based on API usage through your Console account.\n"
+        " Select login method:\n"
+        " ❯ 1. Claude account with subscription · Pro, Max, Team, or Enterprise\n"
+        "   2. Anthropic Console account · API usage billing\n"
+    )
+    assert classify_state(login) == PaneState.LOGGED_OUT
+
+
+def test_classify_onboarding_theme_as_logged_out():
+    theme = (
+        "   3. Light mode\n ❯ 6. Dark mode (ANSI colors only) ✔\n"
+        "  Syntax theme: ansi (ctrl+t to disable)\n"
+    )
+    assert classify_state(theme) == PaneState.LOGGED_OUT

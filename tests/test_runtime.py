@@ -4,7 +4,7 @@ import d_brain.services.runtime as rt
 from d_brain.config import Settings
 
 
-def _settings(tmp_path, **over):
+def _settings(tmp_path, *, persona: bool = True, **over):
     base = dict(
         telegram_bot_token="t",
         deepgram_api_key="d",
@@ -13,6 +13,10 @@ def _settings(tmp_path, **over):
         _env_file=None,
     )
     base.update(over)
+    if persona:  # the boot assertion requires the persona file
+        deploy = tmp_path / "deploy"
+        deploy.mkdir(parents=True, exist_ok=True)
+        (deploy / "brain-system.md").write_text("# d-brain session contract\n")
     return Settings(**base)
 
 
@@ -44,3 +48,15 @@ def test_explicit_session_name_used(tmp_path):
     rt.reset()
     s = _settings(tmp_path, brain_session_name="dbrain_fixed")
     assert rt.get_session(s).session_name == "dbrain_fixed"
+
+
+def test_get_session_refuses_without_persona(tmp_path):
+    """runtime.py used to silently pass system_prompt_file=None when the
+    persona file is missing — booting a personality-less vanilla agent.
+    v3.0: refuse loudly instead."""
+    import pytest
+
+    rt.reset()
+    s = _settings(tmp_path, persona=False)
+    with pytest.raises(RuntimeError, match="persona"):
+        rt.get_session(s)

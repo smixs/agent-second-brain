@@ -48,12 +48,22 @@ def get_session(settings: Settings) -> ClaudeSession:
     project_root = settings.vault_path.parent
     mcp = project_root / "mcp-config.json"
     brain_prompt = project_root / "deploy" / "brain-system.md"
+    # Boot assertion: without the persona file the brain would silently start
+    # as a vanilla agent (no identity, no reply contract). Refuse loudly.
+    if (
+        not brain_prompt.exists()
+        or "# d-brain session contract" not in brain_prompt.read_text()
+    ):
+        raise RuntimeError(
+            f"persona file missing or invalid: {brain_prompt} — "
+            "refusing to start a personality-less brain"
+        )
     _session = ClaudeSession(
         session_name=_persisted_name(settings),
         work_dir=settings.vault_path,
         runtime_dir=settings.runtime_dir,
         mcp_config=mcp if mcp.exists() else None,
-        system_prompt_file=brain_prompt if brain_prompt.exists() else None,
+        system_prompt_file=brain_prompt,
         model=settings.claude_model or None,
     )
     return _session

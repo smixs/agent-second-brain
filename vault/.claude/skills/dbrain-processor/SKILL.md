@@ -38,15 +38,15 @@ CORRECT:
    - Read `business/_index.md` — Your Business (клиенты, проекты, CRM)
    - Read `projects/_index.md` — личные проекты (если релевантно)
 3. **Read daily** — daily/YYYY-MM-DD.md
-4. **Check workload** — `mcp-cli call todoist find-tasks-by-date '{"startDate": "today", "daysCount": 7}'`
-5. **CHECK PROCESS GOALS** — `mcp-cli call todoist find-tasks '{"labels": ["process-goal"]}'`
-   → If empty or stale: generate from goals, create recurring tasks
-6. **Process entries** — Classify → task or thought, detect business mentions
-7. **Build links** — Connect notes with [[wiki-links]], link to business entities
-8. **Generate HTML report** — include process goals status + business activity
-9. **Log actions to daily** — append action log entry (see below)
-10. **Evolve MEMORY.md** — update long-term memory if needed (see below)
-11. **Capture observations** — record friction signals to handoff.md (see below)
+4. **Process entries** — Classify → task or thought, detect business mentions
+5. **Create cards (autograph)** — new entities/thoughts become vault cards per
+   the autograph template (type, description-as-snippet, tags, status); tasks
+   become checklist entries in the daily note / project notes
+6. **Build links** — Connect notes with [[wiki-links]], link to business entities
+7. **Generate HTML report** — business activity + day summary
+8. **Log actions to daily** — append action log entry (see below)
+9. **Evolve MEMORY.md** — update long-term memory if needed (see below)
+10. **Capture observations** — record friction signals to handoff.md (see below)
 
 ## ОБЯЗАТЕЛЬНО: Логирование в daily/
 
@@ -64,7 +64,7 @@ CORRECT:
 **Что логировать:**
 - Создание файлов в thoughts/
 - Обновление business/ или projects/
-- Создание задач в Todoist (с task ID)
+- Добавление task-записей в daily/проекты
 - Синхронизация с внешними системами
 
 **Пример:**
@@ -72,9 +72,9 @@ CORRECT:
 ## 14:30 [text]
 Обработка ежедневных записей
 
-**Создано задач:** 3
-- "Follow-up Acme Corp" (id: 8501234567, p2, завтра)
-- "Подготовить КП Unilever" (id: 8501234568, p2, пятница)
+**Создано задач:** 2
+- [ ] Follow-up Acme Corp (due: завтра, p2)
+- [ ] Подготовить КП Unilever (due: пятница, p2)
 
 **Сохранено мыслей:** 1
 - [[thoughts/ideas/product-launch|Product Launch]] — идея запуска
@@ -82,7 +82,7 @@ CORRECT:
 
 **Зачем:** Audit trail + контекст для будущих обработок.
 
-## Evolve MEMORY.md (Step 10 Detail)
+## Evolve MEMORY.md (Step 9 Detail)
 
 **ЦЕЛЬ:** Поддерживать MEMORY.md актуальным. Не добавлять, а ЭВОЛЮЦИОНИРОВАТЬ.
 
@@ -169,7 +169,7 @@ new_string: "| LogisticsLead | ✅ Signed | $XXK |"
 • Key Decisions → +1 новое решение
 ```
 
-## Capture Observations (Step 11 Detail)
+## Capture Observations (Step 10 Detail)
 
 **ЦЕЛЬ:** Записывать friction signals, паттерны и идеи для улучшения системы.
 
@@ -189,7 +189,7 @@ Append в `vault/.session/handoff.md` секцию `## Observations`:
 
 ```markdown
 ## Observations
-- [friction] YYYY-MM-DD: mcp-cli timeout 3x на todoist — retry спас, но -60 сек
+- [friction] YYYY-MM-DD: transcription timeout 3x — retry спас, но -60 сек
 - [pattern] YYYY-MM-DD: daily без entries 2 дня подряд — выходные?
 - [idea] YYYY-MM-DD: CRM карточки без deal_deadline = невидимые дедлайны
 ```
@@ -212,52 +212,6 @@ Append в `vault/.session/handoff.md` секцию `## Observations`:
 
 ---
 
-## Process Goals Check (Step 5 Detail)
-
-**ОБЯЗАТЕЛЬНО выполни этот шаг при каждом /process:**
-
-### 1. Проверь существующие process goals
-
-```bash
-mcp-cli call todoist find-tasks '{"labels": ["process-goal"], "limit": 20}'
-```
-
-### 2. Если process goals ОТСУТСТВУЮТ — создай их
-
-Читай goals файлы и генерируй process commitments:
-
-| Goal Level | Source | Process Pattern |
-|------------|--------|-----------------|
-| Weekly ONE Big Thing | goals/3-weekly.md | 2h deep work ежедневно |
-| Monthly Top 3 | goals/2-monthly.md | 1 action/день на приоритет |
-| Yearly Focus | goals/1-yearly-*.md | 30 мин/день на стратегию |
-
-**Создай recurring tasks:**
-
-```bash
-mcp-cli call todoist add-tasks '{"tasks": [
-  {"content": "2h deep work: [ONE Big Thing]", "dueString": "every weekday at 6am", "priority": 2, "labels": ["process-goal"]},
-  {"content": "1 outreach/день: [monthly priority]", "dueString": "every weekday", "priority": 3, "labels": ["process-goal"]},
-  {"content": "30 мин продуктовые идеи", "dueString": "every day", "priority": 4, "labels": ["process-goal"]}
-]}'
-```
-
-**Лимит:** Max 5-7 активных process goals.
-
-### 3. Если process goals ЕСТЬ — проверь статус
-
-- Активные (upcoming) → ✅ показать в отчёте
-- Просроченные (overdue) → ⚠️ предупредить
-- Устаревшие (не связаны с текущими целями) → рекомендовать удалить
-
-### 4. Включи в отчёт
-
-```html
-<b>📋 Process Goals:</b>
-• 2h deep work: [Client Project] → ✅ активен
-• 1 outreach/день → ⚠️ просрочен
-{N} активных | {M} требуют внимания
-```
 
 ## Entry Format
 
@@ -322,7 +276,7 @@ business/
 
 ## Classification
 
-task → Todoist (see references/todoist.md)
+task → checklist entry in daily/project notes
 idea/reflection/learning → thoughts/ (see references/classification.md)
 client/project mention → link to Business/Projects + create task if actionable
 
@@ -519,7 +473,6 @@ Max length: 4096 characters.
 Read these files as needed:
 - references/about.md — User profile, decision filters
 - references/classification.md — Entry classification rules
-- references/todoist.md — Task creation details + recurring patterns
 - references/goals.md — Goal alignment logic
 - references/process-goals.md — Process vs outcome goals, transformation patterns
 - references/links.md — Wiki-links building

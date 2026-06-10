@@ -48,7 +48,7 @@ When processing daily files:
 1. **Read chronologically** — entries are timestamped
 2. **Classify each entry** — task, idea, reflection, learning, project
 3. **Check for photos** — analyze with vision if present
-4. **Extract actionable items** — create tasks in Todoist
+4. **Extract actionable items** — add task entries to the daily note
 5. **Save valuable thoughts** — move to `thoughts/` categories
 6. **Mark as processed** — after successful processing
 

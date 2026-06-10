@@ -49,10 +49,12 @@ class ClaudeProcessor:
             "processed_entries": 0,
         }
 
-    def _ask(self, prompt: str) -> dict[str, Any]:
+    def _ask(self, prompt: str, *, wrap: bool = True) -> dict[str, Any]:
         if self.session is None:
             return {"error": "session not configured", "processed_entries": 0}
-        return self._to_report(self.session.ask(prompt, timeout=DEFAULT_TIMEOUT))
+        return self._to_report(
+            self.session.ask(prompt, timeout=DEFAULT_TIMEOUT, wrap=wrap)
+        )
 
     # ── content helpers (unchanged) ──────────────────────────────────
 
@@ -77,10 +79,16 @@ class ClaudeProcessor:
 {skill_content}
 === END SKILL ===
 
+ЯДРО ОБРАБОТКИ:
+1. Создай карточки из заметок дня по шаблону autograph
+   (vault/.claude/skills/autograph/ — type, description-сниппет, tags, status)
+2. Свяжи карточки wiki-ссылками с хабами и соседями
+3. Сформируй саммари дня → обнови MEMORY.md / handoff.md по правилам скилла
+
 CRITICAL OUTPUT FORMAT:
 - Return ONLY raw HTML for Telegram (parse_mode=HTML)
 - NO markdown: no **, no ## , no ```, no tables
 - Start directly with 📊 <b>Обработка за {day}</b>
 - Allowed tags: <b>, <i>, <code>, <s>, <u>
 - If entries already processed, return status report in same HTML format"""
-        return self._ask(prompt)
+        return self._ask(prompt, wrap=True)

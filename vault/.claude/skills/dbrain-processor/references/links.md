@@ -144,7 +144,7 @@ In related notes, add backlink to new note if highly relevant.
 - [[business/crm/phonebrand|PhoneBrand]] — extends: SMM стратегия 2026
 ```
 
-**В задаче Todoist (description):**
+**В task-записи (контекст):**
 ```
 Description: "Клиент: [[business/crm/acme-corp|Acme Corp]]"
 ```

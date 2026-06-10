@@ -9,7 +9,7 @@ Based on user's work context (see [ABOUT.md](ABOUT.md)):
 
 **Keywords:** [Client A], [Client B], [Client C], клиент, бриф, презентация, дедлайн, KPI
 
-**→ Category:** task (p1-p2) → Todoist
+**→ Category:** task (p1-p2) → vault task entry
 
 ### AI & Tech
 Инструменты, модели, промпты, пайплайны, агенты
@@ -121,9 +121,9 @@ For `[photo]` entries:
 
 | Category | Destination | Priority |
 |----------|-------------|----------|
-| task (client) | Todoist | p1-p2 |
-| task (ops) | Todoist | p2-p3 |
-| task (content) | Todoist | p3-p4 |
+| task (client) | vault task entry | p1-p2 |
+| task (ops) | vault task entry | p2-p3 |
+| task (content) | vault task entry | p3-p4 |
 | idea | thoughts/ideas/ | — |
 | reflection | thoughts/reflections/ | — |
 | project | thoughts/projects/ | — |

@@ -49,7 +49,7 @@ After EACH processed entry, add marker:
 
 For tasks with details:
 ```markdown
-<!-- ✓ processed: task → Todoist: {name} {priority} {date} -->
+<!-- ✓ processed: task → vault: {name} {priority} {date} -->
 ```
 
 ## Rule 6: Apply Decision Filters
@@ -77,7 +77,7 @@ See [ABOUT.md](ABOUT.md) → Anti-Patterns section.
 ## Checklist Before Completion
 
 - [ ] All new entries processed
-- [ ] No duplicates in Todoist
+- [ ] No duplicate task entries
 - [ ] All tasks have dates and concrete actions
 - [ ] Decision filters applied
 - [ ] Anti-patterns avoided

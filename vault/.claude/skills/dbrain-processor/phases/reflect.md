@@ -59,7 +59,7 @@ Rules:
 If problems occurred during processing, append to `.session/handoff.md` under `## Observations`:
 
 ```markdown
-- [friction] 2026-02-19: mcp-cli timeout on todoist — retried 3x
+- [friction] 2026-02-19: transcription timeout — retried 3x
 - [pattern] 2026-02-19: daily had only 2 entries — low activity day
 ```
 

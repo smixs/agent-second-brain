@@ -4,13 +4,13 @@ FakeSession pattern as in test_claude_session.py — no tmux, scripted
 AskResults, recorder callables for deliver/alert, a manual clock.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from d_brain.services.claude_session import AskResult
 from d_brain.services.cron_runner import SILENT_MARKER, CronRunner, wrap_job_prompt
 from d_brain.services.cron_store import CronJob, CronStore, Schedule
 
-NOW = datetime(2026, 6, 10, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 6, 10, 12, 0, tzinfo=UTC)
 
 
 class FakeSession:
@@ -242,6 +242,110 @@ async def test_rate_limited_skips_without_recover_or_count(tmp_path):
     assert job.state.consecutive_errors == 0
     assert job.state.last_status == "rate_limited"
     assert "/clear" not in session.controls
+
+
+# ── crash-safety (blind-review findings) ─────────────────────────────
+
+
+async def test_at_claim_rearms_retry_instead_of_none(tmp_path):
+    """A bot restart between claim and record must not brick a one-shot:
+    claim leaves a retry next_run, success/record clears or deletes it."""
+    store = _store(tmp_path)
+    _add_job(store, "once", kind="at", delete_after_run=True)
+    runner = _runner(store, FakeSession())
+    claimed = runner.claim_due(NOW)
+    assert len(claimed) == 1
+    persisted = store.load()[0]
+    assert persisted.state.next_run == (NOW + timedelta(seconds=300)).isoformat()
+
+
+async def test_oneshot_success_clears_next_run_when_kept(tmp_path):
+    """kind=at without delete_after_run must not refire after success."""
+    store = _store(tmp_path)
+    _add_job(store, "once", kind="at", delete_after_run=False)
+    await _runner(store, FakeSession([AskResult("ok", reply="x")])).tick()
+    job = store.load()[0]
+    assert job.state.next_run is None
+    assert job.state.last_status == "ok"
+
+
+async def test_deliver_crash_counts_as_failure_and_clears(tmp_path):
+    store = _store(tmp_path)
+    _add_job(store, "once", kind="at", delete_after_run=True)
+
+    async def bad_deliver(*args):
+        raise RuntimeError("telegram down")
+
+    session = FakeSession([AskResult("ok", reply="x")])
+    await _runner(store, session, deliver=bad_deliver).tick()
+    jobs = store.load()
+    assert len(jobs) == 1  # NOT deleted — will retry
+    assert jobs[0].state.last_status == "deliver_error"
+    assert jobs[0].state.consecutive_errors == 1
+    assert "/clear" in session.controls  # context still dropped
+
+
+async def test_tick_survives_job_crash_and_runs_rest_of_batch(tmp_path):
+    store = _store(tmp_path)
+    _add_job(store, "boom")
+    _add_job(store, "fine")
+
+    class ExplodingRecover(FakeSession):
+        def force_recover(self):
+            raise RuntimeError("session not ready")
+
+    session = ExplodingRecover(
+        [AskResult("error", detail="x"), AskResult("ok", reply="y")]
+    )
+    deliver = Recorder()
+    await _runner(store, session, deliver=deliver).tick()
+    assert len(session.asked) == 2  # second job still ran
+    boom = next(j for j in store.load() if j.id == "boom")
+    assert boom.state.last_status == "crash"
+    assert boom.state.consecutive_errors == 1
+
+
+async def test_claim_skips_malformed_next_run_without_killing_tick(tmp_path):
+    store = _store(tmp_path)
+    _add_job(store, "bad")
+    _add_job(store, "good")
+
+    def corrupt(jobs):
+        jobs[0].state.next_run = "definitely not a date"
+
+    store.mutate(corrupt)
+    session = FakeSession([AskResult("ok", reply="x")])
+    await _runner(store, session).tick()
+    assert len(session.asked) == 1  # good ran, bad skipped, no exception
+
+
+async def test_claim_treats_naive_next_run_as_utc(tmp_path):
+    store = _store(tmp_path)
+    _add_job(store, "naive")
+
+    def make_naive(jobs):
+        jobs[0].state.next_run = NOW.replace(tzinfo=None).isoformat()
+
+    store.mutate(make_naive)
+    session = FakeSession([AskResult("ok", reply="x")])
+    await _runner(store, session).tick()
+    assert len(session.asked) == 1
+
+
+def test_load_tolerates_concurrent_rename(tmp_path):
+    """FileNotFoundError between exists() and read must not escape load()."""
+    from d_brain.services.cron_store import CronStore as CS
+
+    store = CS(tmp_path / "cron")
+    store.save([])
+    # Simulate the race directly: file vanishes after exists() check
+    store.jobs_file.unlink()
+    real_exists = type(store.jobs_file).exists
+    try:
+        type(store.jobs_file).exists = lambda self: True  # type: ignore[method-assign]
+        assert store.load() == []
+    finally:
+        type(store.jobs_file).exists = real_exists  # type: ignore[method-assign]
 
 
 # ── prompt wrapper ───────────────────────────────────────────────────

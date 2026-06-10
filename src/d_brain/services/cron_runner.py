@@ -14,6 +14,7 @@ Semantics:
 """
 
 import asyncio
+import contextlib
 import copy
 import logging
 from collections.abc import Awaitable, Callable
@@ -75,8 +76,10 @@ class CronRunner:
         """Snapshot due jobs and advance their next_run under the lock.
 
         Persisting the advance BEFORE execution gives at-most-once: a
-        crash mid-ask never refires the slot. One-shot ('at') jobs get
-        next_run=None here; success deletes them, failure re-arms a retry.
+        crash mid-ask never refires the slot. One-shot ('at') jobs are
+        re-armed to now+retry (not None) — so a crash between claim and
+        record leaves a job that fires again instead of a bricked one;
+        success then deletes it or clears next_run.
         """
         claimed: list[CronJob] = []
 
@@ -84,11 +87,24 @@ class CronRunner:
             for job in jobs:
                 if not job.enabled or not job.state.next_run:
                     continue
-                if datetime.fromisoformat(job.state.next_run) > now:
+                try:
+                    due_at = datetime.fromisoformat(job.state.next_run)
+                except ValueError:
+                    # One malformed entry must not stall the whole schedule.
+                    logger.error(
+                        "job %s has malformed next_run %r — skipping",
+                        job.id,
+                        job.state.next_run,
+                    )
+                    continue
+                if due_at.tzinfo is None:
+                    due_at = due_at.replace(tzinfo=UTC)
+                if due_at > now:
                     continue
                 claimed.append(copy.deepcopy(job))
                 if job.schedule.kind == "at":
-                    job.state.next_run = None
+                    retry_at = now + timedelta(seconds=self.retry_seconds)
+                    job.state.next_run = retry_at.isoformat()
                 else:
                     nxt = compute_next_run(job.schedule, now=now)
                     job.state.next_run = nxt.isoformat() if nxt else None
@@ -115,14 +131,28 @@ class CronRunner:
         if res.ok:
             reply = (res.reply or "").strip()
             silent = reply.startswith(SILENT_MARKER)
+            delivery_error: str | None = None
             if reply and not silent:
                 chat = job.chat_id or self.default_chat_id
                 if chat is not None:
-                    await self.deliver(chat, reply)
+                    try:
+                        await self.deliver(chat, reply)
+                    except Exception as exc:  # noqa: BLE001 — Telegram hiccup
+                        logger.exception("cron job %s delivery failed", job.id)
+                        delivery_error = str(exc)[:200]
             # Jobs are stateless by contract; drop the turn's context so
-            # the next job starts clean and the window never grows.
-            await asyncio.to_thread(self.session.send_control, "/clear")
-            self._record_success(job, now, silent=silent)
+            # the next job starts clean and the window never grows. Best
+            # effort — a failed /clear must not block the state update.
+            with contextlib.suppress(Exception):
+                await asyncio.to_thread(self.session.send_control, "/clear")
+            if delivery_error is not None:
+                # The work happened but the user never saw it: keep the job
+                # (one-shots retry) and count the failure.
+                self._record_failure(
+                    job, now, status="deliver_error", detail=delivery_error, count=True
+                )
+            else:
+                self._record_success(job, now, silent=silent)
             return
 
         logger.error("cron job %s failed: %s %s", job.id, res.status, res.detail)
@@ -152,6 +182,9 @@ class CronRunner:
             current.state.last_status = "ok-silent" if silent else "ok"
             current.state.last_error = None
             current.state.consecutive_errors = 0
+            if current.schedule.kind == "at":
+                # Claim re-armed a retry slot; the one-shot has now fired.
+                current.state.next_run = None
 
         self.store.mutate(fn)
 
@@ -193,7 +226,18 @@ class CronRunner:
 
     async def tick(self) -> None:
         for job in self.claim_due(self.clock()):
-            await self.run_job(job)
+            try:
+                await self.run_job(job)
+            except Exception as exc:  # noqa: BLE001 — one job must not kill the batch
+                logger.exception("cron job %s crashed", job.id)
+                with contextlib.suppress(Exception):
+                    self._record_failure(
+                        job,
+                        self.clock(),
+                        status="crash",
+                        detail=str(exc)[:200],
+                        count=True,
+                    )
 
     async def run(self, tick_seconds: float) -> None:
         logger.info("cron runner started (tick %.0fs)", tick_seconds)

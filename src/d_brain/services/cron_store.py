@@ -140,17 +140,21 @@ class CronStore:
         self.lock_file = self.cron_dir / "jobs.lock"
 
     def load(self) -> list[CronJob]:
-        if not self.jobs_file.exists():
-            return []
         try:
             raw = json.loads(self.jobs_file.read_text())
             return [_job_from_dict(j) for j in raw.get("jobs", [])]
+        except FileNotFoundError:
+            # Also covers a concurrent quarantine-rename by another process.
+            return []
         except (json.JSONDecodeError, KeyError, TypeError) as exc:
             # Keep the evidence, never wipe it: rename and start empty.
             quarantine = self.jobs_file.with_name(
                 f"jobs.json.corrupt-{int(time.time())}"
             )
-            self.jobs_file.rename(quarantine)
+            try:
+                self.jobs_file.rename(quarantine)
+            except FileNotFoundError:
+                return []  # the other reader quarantined it first
             logger.error("corrupt jobs.json moved to %s: %s", quarantine, exc)
             return []
 

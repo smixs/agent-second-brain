@@ -90,10 +90,17 @@ def check_disk(runtime_dir: Path, min_bytes: int = 500_000_000) -> CheckResult:
     return CheckResult("disk", free >= min_bytes, f"{gb:.1f} GB свободно")
 
 
-def check_claude_version(claude_bin: str = "claude") -> CheckResult:
+def check_claude_version(claude_bin: str | None = None) -> CheckResult:
+    # Manual runs (ssh, cron) often lack ~/.local/bin in PATH — resolve the
+    # binary the way the install lays it out instead of false-alarming.
+    bin_ = (
+        claude_bin
+        or shutil.which("claude")
+        or str(Path.home() / ".local" / "bin" / "claude")
+    )
     try:
         out = subprocess.run(
-            [claude_bin, "--version"], capture_output=True, text=True, timeout=15
+            [bin_, "--version"], capture_output=True, text=True, timeout=15
         )
         return CheckResult("claude", out.returncode == 0, out.stdout.strip() or "ok")
     except (OSError, subprocess.SubprocessError) as exc:

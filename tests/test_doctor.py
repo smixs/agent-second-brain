@@ -85,3 +85,21 @@ def test_canary_is_tagged_as_maintenance():
     sess = RecordingSession(AskResult("ok", reply="DBRAIN_OK"))
     Doctor(sess, checks=[]).run()
     assert sess.request_ids and sess.request_ids[0].startswith("maint-")
+
+
+def test_check_claude_version_resolves_binary_outside_path(monkeypatch, tmp_path):
+    # Manual runs (ssh, cron) often lack ~/.local/bin in PATH — the check
+    # must resolve the binary like the services do, not false-alarm.
+    import d_brain.services.doctor as doc
+
+    fake_bin = tmp_path / ".local" / "bin" / "claude"
+    fake_bin.parent.mkdir(parents=True)
+    fake_bin.write_text("#!/bin/sh\necho 2.1.0\n")
+    fake_bin.chmod(0o755)
+
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")  # no ~/.local/bin
+    monkeypatch.setattr(doc.Path, "home", staticmethod(lambda: tmp_path))
+
+    res = doc.check_claude_version()
+    assert res.ok
+    assert "2.1.0" in res.detail

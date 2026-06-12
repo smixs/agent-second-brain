@@ -70,6 +70,15 @@ systemctl --user enable \
 systemctl --user restart dbrain-bot.service dbrain-watchdog.service
 systemctl --user start dbrain-process.timer dbrain-doctor.timer
 
+# Privacy repair for existing installs: the runtime dir holds the full pane
+# transcript (pane.log) and cron prompts — owner-only, whatever umask
+# originally created them. New code enforces this; fix what's already there.
+if [ -d "$RUNTIME_DIR" ]; then
+    chmod 700 "$RUNTIME_DIR"
+    find "$RUNTIME_DIR" -type d -exec chmod 700 {} +
+    find "$RUNTIME_DIR" -type f -exec chmod 600 {} +
+fi
+
 say "7/8 Guard: no claude -p in the hot path"
 bash "$PROJECT_DIR/scripts/check-no-claude-p.sh"
 

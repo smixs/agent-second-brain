@@ -413,3 +413,24 @@ def test_is_turn_active_reflects_lock_state(tmp_path, clock):
     finally:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)
         os.close(lock_fd)
+
+
+# ── runtime privacy: the pane transcript is owner-only ──────────────────
+
+
+def test_runtime_dir_is_owner_only(tmp_path, clock):
+    fake = FakeTmux([READY], exists=False)
+    make_session(tmp_path, fake, clock)
+    mode = (tmp_path / ".dbrain").stat().st_mode & 0o777
+    assert mode == 0o700
+
+
+def test_pane_log_precreated_owner_only_before_pipe(tmp_path, clock):
+    # pipe-pane appends the FULL Claude transcript via `cat >>` under the
+    # tmux server's umask — the file must already exist as 0600.
+    fake = FakeTmux([READY], exists=False)
+    s = make_session(tmp_path, fake, clock)
+    s.ensure_session()
+    log = tmp_path / ".dbrain" / "pane.log"
+    assert log.exists()
+    assert (log.stat().st_mode & 0o777) == 0o600

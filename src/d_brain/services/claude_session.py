@@ -99,6 +99,9 @@ class ClaudeSession:
         self.work_dir = Path(work_dir)
         self.runtime_dir = Path(runtime_dir)
         self.runtime_dir.mkdir(parents=True, exist_ok=True)
+        # The dir holds the full pane transcript and turn state — owner-only,
+        # enforced on every start so pre-existing installs get repaired too.
+        os.chmod(self.runtime_dir, 0o700)
         self.mcp_config = Path(mcp_config) if mcp_config else None
         self.system_prompt_file = (
             Path(system_prompt_file) if system_prompt_file else None
@@ -208,6 +211,10 @@ class ClaudeSession:
         )
         # Bigger scrollback so long replies stay within capture range.
         self._tmux("set-option", "-t", self.session_name, "history-limit", "50000")
+        # Pre-create the transcript owner-only: `cat >>` appends and keeps
+        # the mode, while letting tmux create it would use the server umask.
+        self._pane_log.touch()
+        os.chmod(self._pane_log, 0o600)
         self._tmux(
             "pipe-pane",
             "-t",

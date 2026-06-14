@@ -518,3 +518,39 @@ def test_ask_dismisses_feedback_survey_instead_of_stalling(tmp_path, clock):
     assert pressed, "survey was not dismissed with 0"
     escapes = [c for c in fake.sent_keys() if c[-1] == "Escape"]
     assert not escapes, "stall interrupt fired instead of dismissing survey"
+
+
+def test_growing_pane_log_prevents_false_stall(tmp_path, clock):
+    # Version-proof liveness: even if a future spinner format is
+    # unrecognized, a transcript that keeps growing means the brain is
+    # working — it must not be killed as a stall.
+    log = tmp_path / ".dbrain" / "pane.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text("")
+    busy = "thinking, but with a spinner we do not recognize\n"
+    fake = FakeTmux([READY] + [busy] * 20 + [_complete("rid00001")], exists=True)
+    s = make_session(tmp_path, fake, clock)  # stall_timeout=10, poll=1
+
+    def grow_sleep(seconds: float) -> None:
+        clock["now"] += seconds
+        with log.open("a") as f:
+            f.write("x" * 100)  # transcript advancing → alive
+
+    s._sleep = grow_sleep
+    res = s.ask("long task")
+    assert res.status == "ok"
+    assert not any(c[-1] in ("Escape", "C-c") for c in fake.sent_keys())
+
+
+def test_static_pane_log_and_no_spinner_still_stalls(tmp_path, clock):
+    # The fallback must not disable stall detection: a genuinely wedged
+    # turn (no spinner, transcript frozen) still gets interrupted.
+    log = tmp_path / ".dbrain" / "pane.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text("frozen")
+    busy = "no spinner, no markers, nothing changing\n"
+    fake = FakeTmux([READY] + [busy] * 40, exists=True)
+    s = make_session(tmp_path, fake, clock)
+    res = s.ask("x", timeout=600)
+    assert res.status == "error"
+    assert "stall" in (res.detail or "").lower()

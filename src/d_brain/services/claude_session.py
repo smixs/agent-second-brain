@@ -162,6 +162,14 @@ class ClaudeSession:
             "capture-pane", "-t", self._target, "-p", "-S", _CAPTURE_SCROLLBACK
         ).stdout
 
+    def _pane_log_size(self) -> int:
+        """Byte size of the piped transcript — a growing log is the
+        version-proof liveness signal (no on-screen text dependency)."""
+        try:
+            return self._pane_log.stat().st_size
+        except OSError:
+            return 0
+
     def _session_exists(self) -> bool:
         return self._tmux("has-session", "-t", self.session_name).returncode == 0
 
@@ -430,6 +438,7 @@ class ClaudeSession:
             self._send_prompt(prompt, rid, wrap=wrap)
 
             last_active = self._clock()
+            last_log_size = self._pane_log_size()
             deadline = self._clock() + timeout
             idle_streak = 0
             while self._clock() < deadline:
@@ -465,9 +474,14 @@ class ClaudeSession:
                 # Stall model: silence is NOT a hang signal — a quiet task
                 # still shows the working spinner. Stuck == no visible turn
                 # (and no completion) for longer than stall_timeout.
-                if is_working(cap):
+                # Two liveness signals: the recognized spinner, OR a growing
+                # transcript — pane.log growth is version-proof and survives
+                # any future change to the spinner's on-screen text.
+                log_size = self._pane_log_size()
+                if is_working(cap) or log_size > last_log_size:
                     last_active = self._clock()
-                elif self._clock() - last_active > self._stall_timeout:
+                last_log_size = log_size
+                if self._clock() - last_active > self._stall_timeout:
                     self._interrupt()
                     # leave inflight as an orphan/stuck signal for the watchdog
                     return AskResult("error", detail="session stalled (no active turn)")

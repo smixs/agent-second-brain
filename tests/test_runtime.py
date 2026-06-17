@@ -83,6 +83,33 @@ def test_get_cron_session_refuses_without_persona(tmp_path):
         rt.get_cron_session(s)
 
 
+def test_relative_vault_path_yields_absolute_brain_paths(tmp_path, monkeypatch):
+    """A fork installed with the default relative VAULT_PATH=./vault must
+    still get ABSOLUTE paths into the start command. The brain runs
+    `cd vault && cat deploy/brain-system.md`: a relative persona path would
+    resolve against vault/ AFTER the cd and load nothing — silently booting a
+    personality-less agent (the boot assertion passes because it reads from
+    the bot's cwd, not the brain's). Resolving vault_path at config time keeps
+    project_root / persona / mcp absolute regardless of the brain's cwd."""
+    rt.reset()
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "vault").mkdir()
+    deploy = tmp_path / "deploy"
+    deploy.mkdir()
+    (deploy / "brain-system.md").write_text("# d-brain session contract\n")
+    s = Settings(
+        telegram_bot_token="t",
+        deepgram_api_key="d",
+        vault_path="./vault",
+        runtime_dir="./rt",
+        _env_file=None,
+    )
+    sess = rt.get_session(s)
+    assert sess.system_prompt_file is not None
+    assert sess.system_prompt_file.is_absolute()
+    assert sess.work_dir.is_absolute()
+
+
 def test_get_session_refuses_without_persona(tmp_path):
     """runtime.py used to silently pass system_prompt_file=None when the
     persona file is missing — booting a personality-less vanilla agent.

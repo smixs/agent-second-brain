@@ -23,7 +23,11 @@ from d_brain.services.cron_store import (
 
 
 def _default_cron_dir() -> str:
-    runtime = Path(os.environ.get("RUNTIME_DIR", "~/.dbrain")).expanduser()
+    # Mirror Settings._expand_user EXACTLY (expanduser + resolve): the bot
+    # ticker reads the resolved dir, so a bare expanduser here would split the
+    # CLI's jobs.json from the ticker's under any symlinked runtime path
+    # (container bind-mount, NFS home, /home → /srv/home).
+    runtime = Path(os.environ.get("RUNTIME_DIR", "~/.dbrain")).expanduser().resolve()
     return str(runtime / "cron")
 
 

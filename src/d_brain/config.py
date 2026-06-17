@@ -72,7 +72,11 @@ class Settings(BaseSettings):
     def _expand_user(cls, v: Path) -> Path:
         # pydantic-settings keeps "~" literal; the cron CLI expanduser-s —
         # expand here too or the bot and CLI split into different state dirs.
-        return v.expanduser()
+        # resolve() makes the path ABSOLUTE: the brain runs `cd vault && cat
+        # deploy/brain-system.md`, and a relative vault_path would make that
+        # cat (and --mcp-config) resolve against the wrong cwd → persona
+        # silently not loaded. One root of absoluteness for all derived paths.
+        return v.expanduser().resolve()
 
     @property
     def cron_dir(self) -> Path:

@@ -44,8 +44,11 @@ def test_cron_fields_have_safe_defaults():
 
 
 def test_cron_dir_lives_under_runtime_dir():
+    # Assert the invariant against the resolved runtime_dir — not a literal
+    # path: the validator now resolve()s, and on macOS /tmp is a symlink to
+    # /private/tmp, so a hardcoded "/tmp/rt/cron" would spuriously mismatch.
     s = _settings(runtime_dir=Path("/tmp/rt"))
-    assert s.cron_dir == Path("/tmp/rt/cron")
+    assert s.cron_dir == s.runtime_dir / "cron"
 
 
 def test_tilde_paths_are_expanded():
@@ -57,3 +60,14 @@ def test_tilde_paths_are_expanded():
     assert "~" not in s.runtime_dir.parts
     assert s.vault_path.is_absolute()
     assert "~" not in s.vault_path.parts
+
+
+def test_relative_paths_are_resolved_absolute():
+    # The default vault_path is the RELATIVE "./vault". The brain starts with
+    # `cd vault && cat deploy/brain-system.md`, so a relative persona path
+    # resolves against vault/ after the cd and loads NOTHING — the brain boots
+    # with no persona and no reply contract. Resolving here keeps the derived
+    # project_root / persona / mcp paths absolute regardless of cwd.
+    s = _settings(runtime_dir="./rt", vault_path="./vault")
+    assert s.runtime_dir.is_absolute()
+    assert s.vault_path.is_absolute()

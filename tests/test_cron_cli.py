@@ -6,7 +6,8 @@ human-readable output, exit 0 on success, exit 2 on bad input.
 
 from datetime import UTC, datetime, timedelta
 
-from d_brain.cron import main
+from d_brain.config import Settings
+from d_brain.cron import _default_cron_dir, main
 from d_brain.services.cron_store import CronStore
 
 
@@ -175,3 +176,25 @@ def test_enable_reenables_and_resets_errors(tmp_path):
     assert job.enabled is True
     assert job.state.consecutive_errors == 0
     assert job.state.next_run is not None
+
+
+def test_cli_and_bot_agree_on_cron_dir_under_symlinked_runtime(tmp_path, monkeypatch):
+    """The CLI default cron dir MUST equal the bot's Settings.cron_dir even
+    when RUNTIME_DIR contains a symlink — otherwise the brain's `cron add`
+    writes jobs.json where the in-bot ticker never looks (and the two
+    jobs.lock files give no mutual exclusion). Both sides resolve()."""
+    real = tmp_path / "real_runtime"
+    real.mkdir()
+    link = tmp_path / "link_runtime"
+    link.symlink_to(real)
+    monkeypatch.setenv("RUNTIME_DIR", str(link))
+
+    s = Settings(
+        telegram_bot_token="t",
+        deepgram_api_key="d",
+        runtime_dir=str(link),
+        _env_file=None,
+    )
+    from pathlib import Path
+
+    assert Path(_default_cron_dir()) == s.cron_dir

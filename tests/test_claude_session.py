@@ -22,6 +22,11 @@ TRUST = (
     " Quick safety check: Is this a project you created or one you trust?\n"
     " ❯ 1. Yes, I trust this folder\n   2. No, exit\n"
 )
+BYPASS = (
+    " WARNING: Claude Code running in Bypass Permissions mode\n\n"
+    " In Bypass Permissions mode, Claude Code will not ask for your approval.\n"
+    " ❯ 1. No, exit\n   2. Yes, I accept\n"
+)
 THINKING = "  ✻ Working…  (esc to interrupt)\n"
 RATE = "  You've reached your usage limit. Your limit resets at 3:00 PM.\n❯\n"
 LOGGED_OUT = "  Invalid API key · Please run /login to authenticate.\n❯\n"
@@ -132,6 +137,29 @@ def test_ensure_session_does_not_enter_spam_on_trust(tmp_path, clock):
     s = make_session(tmp_path, fake, clock)
     s.ensure_session()
     assert fake.enter_count() == 1
+
+
+def _digit_sends(fake: FakeTmux, digit: str) -> int:
+    return sum(1 for c in fake.sent_keys() if c[-1] == digit)
+
+
+def test_ensure_session_accepts_bypass_prompt(tmp_path, clock):
+    """Fresh config dir under --dangerously-skip-permissions shows the bypass
+    accept screen; the session must actively pick "2. Yes, I accept" (the safe
+    default sits on "1. No, exit") and then reach READY."""
+    fake = FakeTmux([BYPASS, READY], exists=False)
+    s = make_session(tmp_path, fake, clock)
+    s.ensure_session()
+    assert _digit_sends(fake, "2") == 1
+    assert (tmp_path / ".dbrain" / "ready").exists()
+
+
+def test_ensure_session_does_not_spam_bypass(tmp_path, clock):
+    """Bypass persists for several captures; "2" debounced to the transition."""
+    fake = FakeTmux([BYPASS, BYPASS, BYPASS, READY], exists=False)
+    s = make_session(tmp_path, fake, clock)
+    s.ensure_session()
+    assert _digit_sends(fake, "2") == 1
 
 
 def test_ensure_session_raises_if_never_ready(tmp_path, clock):

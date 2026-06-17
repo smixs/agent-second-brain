@@ -30,6 +30,7 @@ class PaneState(str, Enum):
     """Coarse state of the interactive session, read from the pane text."""
 
     TRUST_PROMPT = "trust_prompt"  # "Is this a project you trust?" — needs Enter
+    BYPASS_PROMPT = "bypass_prompt"  # "Bypass Permissions mode" accept — needs "2"
     STARTING = "starting"  # welcome box visible, not yet idle
     READY = "ready"  # idle prompt / bypass-permissions footer
     RATE_LIMITED = "rate_limited"  # usage limit hit — do NOT kill, wait for reset
@@ -98,6 +99,19 @@ def is_complete(text: str, rid: str) -> bool:
 # TRUST anchors on the numbered menu (structural), not the prose sentence,
 # so the model describing the trust prompt cannot trigger it.
 _TRUST_MENU_RE = re.compile(r"(?m)^\s*(?:❯\s*)?1\.\s+Yes, I trust this folder")
+# First run with --dangerously-skip-permissions on a fresh config dir shows a
+# full-screen "WARNING: Claude Code running in Bypass Permissions mode" with a
+# numbered menu (1. No, exit / 2. Yes, I accept). classify_state knew nothing
+# of it → UNKNOWN → "not ready in 90s" on every fresh install. Accepting needs
+# the active choice "2" (the safe default ❯ sits on "1. No, exit").
+# DOUBLE anchor: the unique warning TITLE *and* the numbered accept line must
+# BOTH be present. "Yes, I accept" alone is reply-natural (a model could emit a
+# numbered consent list), so unlike TRUST's single unique line we also require
+# the verbatim title — no reply reproduces both at once.
+_BYPASS_TITLE_RE = re.compile(
+    r"WARNING: Claude Code running in Bypass Permissions mode"
+)
+_BYPASS_MENU_RE = re.compile(r"(?m)^\s*(?:❯\s*)?2\.\s+Yes, I accept")
 _RATE_RE = re.compile(
     r"usage limit|rate limit|limit reached|resets at|5-hour limit|weekly limit",
     re.I,
@@ -212,6 +226,22 @@ def classify_state(text: str) -> PaneState:
     # reproduce verbatim in a reply.
     if _TRUST_MENU_RE.search(text):
         return PaneState.TRUST_PROMPT
+    # BYPASS is also a full-screen modal at the TOP — match over the whole pane
+    # (chrome below is blank). Require BOTH the unique title and the numbered
+    # accept line, AND the ABSENCE of the idle footer: the real modal appears
+    # BEFORE the normal TUI (no "bypass permissions on" footer yet), while a
+    # working/idle session always shows that footer. Without this guard a reply
+    # that quotes the warning from scrollback (capture spans -S -200) would be
+    # taken for the modal — and the watchdog, which does not list BYPASS_PROMPT
+    # as serviceable, would force-recover a perfectly healthy session.
+    # Checked before READY so the modal's `❯ 1. No, exit` selector (which
+    # matches _IDLE_RE) can't be mistaken for an idle prompt.
+    if (
+        _BYPASS_TITLE_RE.search(text)
+        and _BYPASS_MENU_RE.search(text)
+        and not _FOOTER_RE.search(text)
+    ):
+        return PaneState.BYPASS_PROMPT
     chrome = _chrome(text)
     if _RATE_RE.search(chrome):
         return PaneState.RATE_LIMITED

@@ -254,6 +254,16 @@ class ClaudeSession:
                 last_state = state
                 self._sleep(self._poll_interval)
                 continue
+            # Bypass-permissions accept screen (fresh config dir): unlike TRUST,
+            # the safe default ❯ sits on "1. No, exit", so we must actively pick
+            # "2. Yes, I accept". Debounced to the transition like TRUST.
+            if state == PaneState.BYPASS_PROMPT:
+                if last_state != PaneState.BYPASS_PROMPT:
+                    self._tmux("send-keys", "-t", self._target, "2")
+                    self._send_enter()
+                last_state = state
+                self._sleep(self._poll_interval)
+                continue
             if state == PaneState.READY:
                 self._ready_flag.write_text("ready\n")
                 logger.info("Claude session %s is ready", self.session_name)

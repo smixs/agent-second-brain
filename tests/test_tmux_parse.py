@@ -51,6 +51,20 @@ TRUST_CAPTURE = """\
  Enter to confirm · Esc to cancel
 """
 
+# Verbatim from the binary (v2.1.179): title, body and the numbered menu shown
+# on first run with --dangerously-skip-permissions on a fresh config dir.
+BYPASS_CAPTURE = """\
+ WARNING: Claude Code running in Bypass Permissions mode
+
+ In Bypass Permissions mode, Claude Code will not ask for your approval before
+ running potentially dangerous commands.
+ This mode should only be used in a sandboxed container/VM that has restricted
+ internet access and can easily be restored if damaged.
+
+ ❯ 1. No, exit
+   2. Yes, I accept
+"""
+
 STARTING_CAPTURE = """\
 ╭─── Claude Code v2.1.168 ──────────────────────────────────────╮
 │                  Loading...                                    │
@@ -181,6 +195,58 @@ def test_is_complete_false_when_answer_still_streaming():
 
 def test_classify_trust_prompt():
     assert classify_state(TRUST_CAPTURE) == PaneState.TRUST_PROMPT
+
+
+def test_classify_bypass_prompt():
+    assert classify_state(BYPASS_CAPTURE) == PaneState.BYPASS_PROMPT
+
+
+def test_classify_bypass_not_triggered_by_prose():
+    # A model REPLY that merely describes bypass mode must not be classified as
+    # the accept screen — the title anchor isn't present.
+    prose = (
+        "────────────────────\n"
+        "⏺ Bypass Permissions mode means Claude Code will not ask for approval.\n"
+        "  To accept it you would choose 'Yes, I accept'.\n"
+        "────────────────────\n❯\n"
+        "  ⏵⏵ bypass permissions on (shift+tab to cycle)\n"
+    )
+    assert classify_state(prose) == PaneState.READY
+
+
+def test_classify_bypass_not_triggered_by_numbered_list_reply():
+    # The dangerous false-positive: a reply that emits a numbered consent list
+    # whose line 2 reads "2. Yes, I accept …". Without the verbatim warning
+    # TITLE it must NOT be taken for the accept screen (else the watchdog's
+    # current_state() would inject "2" into a live session).
+    numbered = (
+        "────────────────────\n"
+        "⏺ Pick one:\n"
+        "  1. No, decline\n"
+        "  2. Yes, I accept the terms\n"
+        "────────────────────\n❯\n"
+        "  ⏵⏵ bypass permissions on (shift+tab to cycle)\n"
+    )
+    assert classify_state(numbered) == PaneState.READY
+
+
+def test_classify_bypass_ignored_when_idle_footer_present():
+    # Codex scenario: a completed reply quotes BOTH the verbatim warning title
+    # AND a "2. Yes, I accept" line, sitting in scrollback while the session is
+    # idle (capture spans -S -200). The live idle footer is present, so this is
+    # a healthy READY session, NOT the modal — the real modal never co-exists
+    # with the footer. Misclassifying it would let the watchdog (BYPASS_PROMPT
+    # is not serviceable) force-recover a healthy session.
+    quoted = (
+        "⏺ The first-run screen reads:\n"
+        " WARNING: Claude Code running in Bypass Permissions mode\n"
+        "   1. No, exit\n"
+        "   2. Yes, I accept\n"
+        "────────────────────\n❯\n────────────────────\n"
+        "  hello | Opus 4.8 (1M context) | ~/p\n"
+        "  ⏵⏵ bypass permissions on (shift+tab to cycle)\n"
+    )
+    assert classify_state(quoted) == PaneState.READY
 
 
 def test_classify_ready_with_bypass_footer():

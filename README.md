@@ -215,6 +215,12 @@ All secrets stay in `.env` (gitignored, chmod 600). Set `CLAUDE_MODEL=sonnet` to
 
 Set `TZ` to your own IANA timezone (e.g. `TZ=Europe/Moscow`) — it defaults to `UTC`, and reminders/schedules are interpreted in it. The cron skill's examples use placeholders, not a fixed zone, so the brain schedules in *your* time.
 
+> **`dbrain restart` does not recreate the brain.** It restarts the bot process; the long-lived Claude Code tmux session deliberately survives (`KillMode=process`) — that's what keeps you on the subscription. Settings read only at session creation (`CLAUDE_MODEL`, `mcp-config.json`, the system prompt) therefore take effect only after the brain is recreated. Kill **both** sessions — the main one and the cron brain (`${brain}_cron`, where reminders run with the same settings) — and the bot rebuilds them on the next message/job:
+> ```bash
+> B="$(cat ~/.dbrain/brain.name)"; tmux kill-session -t "$B"; tmux kill-session -t "${B}_cron" 2>/dev/null
+> ```
+> Bot-level `.env` changes (tokens, `ALLOWED_USER_IDS`, `TZ`) apply on a plain restart.
+
 ## What it does NOT do
 
 - It does **not** send your vault anywhere. Plain markdown, your disk, your git remote if you configure one.

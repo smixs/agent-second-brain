@@ -213,6 +213,8 @@ Drop your own into `vault/.claude/skills/` — the session picks them up like an
 
 All secrets stay in `.env` (gitignored, chmod 600). Set `CLAUDE_MODEL=sonnet` to reduce weekly-limit pressure on a 24/7 bot.
 
+Set `TZ` to your own IANA timezone (e.g. `TZ=Europe/Moscow`) — it defaults to `UTC`, and reminders/schedules are interpreted in it. The cron skill's examples use placeholders, not a fixed zone, so the brain schedules in *your* time.
+
 ## What it does NOT do
 
 - It does **not** send your vault anywhere. Plain markdown, your disk, your git remote if you configure one.

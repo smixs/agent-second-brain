@@ -19,6 +19,7 @@ from aiogram.types import Message
 from d_brain.bot.formatters import send_response
 from d_brain.config import get_settings
 from d_brain.services.chat_session import ChatSessionManager
+from d_brain.services.security import guard_inbound, guard_outbound
 from d_brain.services.session import SessionStore
 from d_brain.services.storage import VaultStorage
 from d_brain.services.transcription import DeepgramTranscriber
@@ -111,10 +112,11 @@ async def _dispatch_text(bot: Bot, chat_id: int, user_id: int, text: str) -> Non
                 "пару минут, отвечу как освобожусь.",
             )
             return
-        await manager.steer(text)
+        await manager.steer(guard_inbound(text)[0])
         await bot.send_message(chat_id, "↪️ Передал в текущую задачу.")
         return
-    await _process_and_reply(bot, chat_id, user_id, text)
+    safe, _ = guard_inbound(text)
+    await _process_and_reply(bot, chat_id, user_id, safe)
 
 
 async def _process_and_reply(bot: Bot, chat_id: int, user_id: int, prompt: str) -> None:
@@ -125,7 +127,7 @@ async def _process_and_reply(bot: Bot, chat_id: int, user_id: int, prompt: str) 
         response = await manager.send_message(user_id, prompt)
 
         if response:
-            await send_response(bot, chat_id, response)
+            await send_response(bot, chat_id, guard_outbound(response))
         else:
             logger.warning(
                 "Empty response from Claude for user %d, retrying...", user_id
@@ -133,7 +135,7 @@ async def _process_and_reply(bot: Bot, chat_id: int, user_id: int, prompt: str) 
             # Retry once before giving up — don't reset session on first empty
             response = await manager.send_message(user_id, prompt)
             if response:
-                await send_response(bot, chat_id, response)
+                await send_response(bot, chat_id, guard_outbound(response))
             else:
                 logger.warning("Empty response after retry for user %d", user_id)
                 await bot.send_message(
@@ -316,8 +318,9 @@ async def handle_chat_voice(message: Message, bot: Bot) -> None:
             msg_id=message.message_id,
         )
 
+        safe_transcript, _ = guard_inbound(transcript)
         await _process_and_reply(
-            bot, message.chat.id, message.from_user.id, f"[voice] {transcript}"
+            bot, message.chat.id, message.from_user.id, f"[voice] {safe_transcript}"
         )
 
     except Exception as e:
@@ -410,6 +413,9 @@ async def handle_chat_media(message: Message, bot: Bot) -> None:
             msg_id=message.message_id,
         )
 
+        # Caption is sender-controlled — sanitize the copy the model sees (daily keeps raw).
+        model_caption, _ = guard_inbound(caption)
+
         group_id = getattr(message, "media_group_id", None)
         if group_id:
             await queue_album_item(
@@ -420,7 +426,7 @@ async def handle_chat_media(message: Message, bot: Bot) -> None:
                 item={
                     "kind": kind,
                     "rel_path": rel_path,
-                    "caption": caption,
+                    "caption": model_caption,
                     "fwd": fwd,
                 },
             )
@@ -430,7 +436,7 @@ async def handle_chat_media(message: Message, bot: Bot) -> None:
             kind=kind,
             rel_path=rel_path,
             original_name=original_name,
-            caption=caption,
+            caption=model_caption,
             fwd=fwd,
         )
         await _process_and_reply(bot, message.chat.id, message.from_user.id, prompt)

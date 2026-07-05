@@ -413,7 +413,8 @@ async def handle_chat_media(message: Message, bot: Bot) -> None:
             msg_id=message.message_id,
         )
 
-        # Caption is sender-controlled — sanitize the copy the model sees (daily keeps raw).
+        # Caption is sender-controlled — sanitize the copy the model sees
+        # (daily keeps the raw text).
         model_caption, _ = guard_inbound(caption)
 
         group_id = getattr(message, "media_group_id", None)

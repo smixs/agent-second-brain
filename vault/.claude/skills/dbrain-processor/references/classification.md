@@ -199,3 +199,34 @@ Group by domain when relevant:
 ## Product
 - [[2024-12-16-saas-pricing-model]] - Pricing research
 ```
+
+---
+
+## ADD / SUPERSEDE / NOOP (temporal conflict)
+
+For every fact worth keeping, pick one operation — this keeps a single non-contradictory
+current truth per subject:
+
+- **ADD** — genuinely new subject → create a card/entry by the autograph template.
+- **NOOP** — already captured and unchanged → do nothing (avoid near-duplicates; grep first).
+- **SUPERSEDE** — the new fact *contradicts* a current value on an existing card (job changed,
+  moved city, status flipped, price revised). Do NOT just append the new value beside the old:
+  1. **Rewrite** the card's current value — the frontmatter field and the top of the description.
+     This is **Compiled Truth**: the living snapshot of what is true *now*.
+  2. Move the OLD value to an append-only `## History` section as a dated line:
+     `- 2026-03→06: TDI Group`. History is append-only and never edited.
+  3. **Never leave two contradictory current values on the same subject.**
+  If a whole card is obsolete (project renamed, decision reverted), set `status: superseded`
+  and add `superseded_by: [[new-card]]`.
+
+The deterministic scan writes `.graph/supersede-candidates.json` — same-entity cards with
+conflicting scalar fields (company/role/status/…). During daily processing, read it and
+resolve each listed group by superseding the stale card. Resolving these is a required step.
+
+## Confidence
+
+Tag each fact's certainty in frontmatter with `confidence:` so recall knows how hard to assert:
+
+- **EXTRACTED** — the user stated it directly → assert it when recalling.
+- **INFERRED** — you deduced it → hedge when recalling ("похоже, ты…").
+- **AMBIGUOUS** — unclear or conflicting source → flag it.

@@ -278,8 +278,8 @@ def _selftest():
         files = [h["file"] for h in res["hits"]]
         if "cards/old-rushana.md" in files and "cards/rushana.md" in files:
             assert files.index("cards/rushana.md") < files.index("cards/old-rushana.md"), files
-        # graceful even with no matches
-        assert search_memory(v, "zzzznomatch", limit=5)["count"] == 0 or True
+        # graceful (and empty) when nothing matches
+        assert search_memory(v, "zzzznomatch", limit=5)["count"] == 0
     print("search.py selftest: OK")
 
 

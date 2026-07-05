@@ -48,7 +48,11 @@ def scan(vault_dir: Path, schema: dict):
                 fields = parse_frontmatter((vault_dir / rp).read_text(encoding="utf-8"))[0]
             except Exception:
                 continue
-            cards.append({"path": rp, "fields": fields or {}})  # notes may lack frontmatter
+            fields = fields or {}  # notes may lack frontmatter
+            # Already-resolved cards must not re-surface as live conflicts every night.
+            if str(fields.get("status", "")).lower() == "superseded":
+                continue
+            cards.append({"path": rp, "fields": fields})
         if len(cards) < 2:
             continue
         conflicts = {}
@@ -111,11 +115,12 @@ def main():
     vault_dir = Path(args[0])
     apply = "--apply" in args
     verbose = "--verbose" in args
-    # Resolve schema via the same fallback chain as graph.py/engine.py (schema.json →
-    # schema.example.json). A fresh vault ships only the example — degrade to {} rather
-    # than raising, so the scan still runs and writes its report.
+    # Resolve THIS vault's schema first, then fall back to the shared example / {} so a
+    # scan against an arbitrary vault_dir never picks up a different vault's schema and
+    # never hard-fails on a fresh vault that ships only schema.example.json.
+    schema_path = vault_dir / ".claude" / "skills" / "autograph" / "schema.json"
     try:
-        schema = load_schema()
+        schema = load_schema(schema_path if schema_path.exists() else None)
     except Exception:
         schema = {}
 

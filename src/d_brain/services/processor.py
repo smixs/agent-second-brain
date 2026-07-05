@@ -86,11 +86,12 @@ class ClaudeProcessor:
 
 ЯДРО ОБРАБОТКИ:
 1. Создай карточки из заметок дня по шаблону autograph
-   (vault/.claude/skills/autograph/ — type, description-сниппет, tags, status, confidence)
+   (type, description-сниппет, tags, status, confidence)
 2. Свяжи карточки wiki-ссылками с хабами и соседями
-3. Разреши конфликты фактов: прочитай .graph/supersede-candidates.json — для каждой
-   группы перепиши актуальное значение (Compiled Truth), старое перенеси в ## History,
-   проставь confidence (правила: references/classification.md, раздел ADD/SUPERSEDE/NOOP)
+3. Разреши конфликты фактов: прочитай .graph/supersede-candidates.json —
+   для каждой группы перепиши актуальное значение (Compiled Truth), старое
+   перенеси в ## History, проставь confidence
+   (правила: references/classification.md → ADD/SUPERSEDE/NOOP)
 4. Сформируй саммари дня → обнови MEMORY.md / handoff.md по правилам скилла
 
 CRITICAL OUTPUT FORMAT:

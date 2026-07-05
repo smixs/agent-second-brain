@@ -115,8 +115,12 @@ def bm25_search(docs, fts_query, limit):
             [(x["path"], x["title"], x["meta"], x["tags"], x["body"]) for x in docs],
         )
         # Column weights: title/meta > tags > body (lower bm25 = more relevant).
+        # bm25() takes ONE weight per column in declaration order, INCLUDING the
+        # UNINDEXED `path` (weight ignored but its slot must be present) — otherwise
+        # every weight shifts left by one and meta/tags get mis-weighted.
         rows = db.execute(
-            "SELECT path FROM d WHERE d MATCH ? ORDER BY bm25(d, 5.0, 5.0, 2.0, 1.0) LIMIT ?",
+            "SELECT path FROM d WHERE d MATCH ? "
+            "ORDER BY bm25(d, 0.0, 5.0, 5.0, 2.0, 1.0) LIMIT ?",
             (fts_query, limit * 4),
         ).fetchall()
         return [r[0] for r in rows]

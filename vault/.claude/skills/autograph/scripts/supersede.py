@@ -48,7 +48,7 @@ def scan(vault_dir: Path, schema: dict):
                 fields = parse_frontmatter((vault_dir / rp).read_text(encoding="utf-8"))[0]
             except Exception:
                 continue
-            cards.append({"path": rp, "fields": fields})
+            cards.append({"path": rp, "fields": fields or {}})  # notes may lack frontmatter
         if len(cards) < 2:
             continue
         conflicts = {}
@@ -83,9 +83,15 @@ def apply_supersede(vault_dir: Path, candidates: list) -> int:
         old_rel = cand["superseded_candidates"][0]
         cur_rel = cand["current"]
         old_path = vault_dir / old_rel
+        cur_path = vault_dir / cur_rel
         try:
+            cur_fields = parse_frontmatter(cur_path.read_text(encoding="utf-8"))[0] or {}
             fields, body, lines = parse_frontmatter(old_path.read_text(encoding="utf-8"))
         except Exception:
+            continue
+        fields = fields or {}
+        # Only apply on a genuinely newer winner — never guess on a tie or missing dates.
+        if _card_date(cur_fields) <= _card_date(fields):
             continue
         if fields.get("status") == "superseded":
             continue
@@ -105,7 +111,13 @@ def main():
     vault_dir = Path(args[0])
     apply = "--apply" in args
     verbose = "--verbose" in args
-    schema = load_schema(vault_dir / ".claude" / "skills" / "autograph" / "schema.json")
+    # Resolve schema via the same fallback chain as graph.py/engine.py (schema.json →
+    # schema.example.json). A fresh vault ships only the example — degrade to {} rather
+    # than raising, so the scan still runs and writes its report.
+    try:
+        schema = load_schema()
+    except Exception:
+        schema = {}
 
     candidates = scan(vault_dir, schema)
 

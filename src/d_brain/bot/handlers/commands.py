@@ -72,7 +72,7 @@ async def cmd_status(message: Message) -> None:
     voice_count = sum(1 for e in entries if "[voice]" in e)
     text_count = sum(1 for e in entries if "[text]" in e)
     photo_count = sum(1 for e in entries if "[photo]" in e)
-    forward_count = sum(1 for e in entries if "[forward from:" in e)
+    forward_count = sum(1 for e in entries if "[forward]" in e)
 
     total = len(entries)
 

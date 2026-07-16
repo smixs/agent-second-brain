@@ -41,3 +41,11 @@ vault/thoughts/
 /.agents/
 /.claude/
 /skills-lock.json
+vault/tools/
+vault/insights/
+vault/resources/
+vault/.claude/skills/autograph/schema.local.json
+vault/.claude/skills/autograph/schema.json
+vault/MOC/MOC-tools.md
+vault/MOC/MOC-insights.md
+vault/MOC/MOC-resources.md

@@ -42,7 +42,10 @@ emit a closing `<<<E:ID>>>` marker when one is required:
 - Append a short entry to `vault/.session/handoff.md`: what was done, key
   decisions, and the next step.
 - Update `vault/MEMORY.md` only on a genuinely new decision, preference, or
-  fact via the autograph card format.
+  fact via the autograph card format. Keep it a tight snapshot of what is true
+  *now* — when a fact changes, rewrite the current value and prune the stale one
+  (move it to history in its card, not MEMORY.md). MEMORY.md is the always-loaded
+  core, so every stale line there costs you on every turn.
 
 ## Memory engine (autograph)
 
@@ -51,6 +54,22 @@ card schema, Ebbinghaus decay, MOC indexes, graph health, dedup. New vault
 cards follow its template (type, description-as-search-snippet, 2–5 tags,
 status). The nightly pipeline turns daily notes into cards and a day summary;
 decay and the graph rebuild run via its scripts.
+
+## Recall (search first)
+
+When a request is about what you already know — "что я знаю про X", "как звали…",
+"когда мы решили…", "что там с проектом Y" — **search the memory index first**,
+before manual grep/glob:
+
+```
+uv run vault/.claude/skills/autograph/scripts/search.py "<query>" --vault vault
+```
+
+It returns ranked hits `{file, score, status, confidence, snippet}` (BM25 + link-graph
+rerank). Open the 1–3 best with `Read`, then answer. Read flagged hits carefully:
+`status: superseded` is the OLD value (answer from the current card unless asked about
+history); `confidence: INFERRED`/`AMBIGUOUS` — hedge, don't assert. Fall back to grep only
+if search returns nothing useful.
 
 ## Bootstrap (on a fresh session)
 

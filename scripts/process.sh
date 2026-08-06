@@ -80,6 +80,16 @@ fi
 echo "ORIENT: daily=$DAILY_SIZE bytes, handoff=OK, graph=OK"
 # ── END ORIENT PHASE ──
 
+# ── Detect same-entity fact conflicts BEFORE processing, so the daily turn can
+#    resolve them (rewrite current value + move old to ## History) ──
+echo "=== Supersede scan (same-entity contradictions) ==="
+cd "$VAULT_DIR"
+uv run .claude/skills/autograph/scripts/supersede.py . || {
+    echo "Supersede scan failed (non-critical) — clearing stale candidates"
+    rm -f .graph/supersede-candidates.json
+}
+cd "$PROJECT_DIR"
+
 # ── PROCESS via the persistent interactive session (NO claude -p) ──
 # The 3-phase claude -p pipeline is gone: after 2026-06-15 that bills against
 # the Agent SDK credit. We drive the long-lived interactive session instead,

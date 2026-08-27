@@ -1,6 +1,6 @@
 ---
 type: note
-description: Personal assistant for processing daily voice/text entries from Telegram. Classifies content, saves thoughts to Obsidian with wiki-links, generates HTML reports. Integrates Your Business context (clients, projects, CRM). Triggers on /process command or daily 21:00 cron.
+description: Personal assistant for processing daily voice/text entries from Telegram. Classifies content, saves thoughts to Obsidian with wiki-links, generates HTML reports. Integrates IPC context (clients, projects, CRM). Triggers on /process command or daily 21:00 cron.
 name: dbrain-processor
 depends_on: [autograph]
 ---
@@ -9,7 +9,7 @@ depends_on: [autograph]
 
 Process daily entries → thoughts (Obsidian) + HTML report (Telegram).
 
-Integrates with Your Business data for business context.
+Integrates with IPC data for business context.
 
 ## CRITICAL: Output Format
 
@@ -35,7 +35,7 @@ CORRECT:
 
 1. **Load personal context** — Read goals/1-yearly, goals/2-monthly, goals/3-weekly
 2. **Load business context**:
-   - Read `business/_index.md` — Your Business (клиенты, проекты, CRM)
+   - Read `business/_index.md` — IPC (клиенты, проекты, CRM)
    - Read `projects/_index.md` — личные проекты (если релевантно)
 3. **Read daily** — daily/YYYY-MM-DD.md
 4. **Process entries** — Classify → task or thought, detect business mentions
@@ -73,11 +73,11 @@ CORRECT:
 Обработка ежедневных записей
 
 **Создано задач:** 2
-- [ ] Follow-up Acme Corp (due: завтра, p2)
-- [ ] Подготовить КП Unilever (due: пятница, p2)
+- [ ] Follow-up Integra Construction (due: завтра, p2)
+- [ ] Подготовить предложение для Жилой фонд (due: пятница, p2)
 
 **Сохранено мыслей:** 1
-- [[thoughts/ideas/product-launch|Product Launch]] — идея запуска
+- [[thoughts/ideas/tronix-shop-launch|TRONIX Shop запуск]] — план запуска сайта
 ```
 
 **Зачем:** Audit trail + контекст для будущих обработок.
@@ -119,21 +119,21 @@ CORRECT:
 
 **Пример 1 — Изменение статуса проекта:**
 ```
-Old: "| Acme Corp NCP Meals | p1 | Активная разработка | $XXK |"
-New info: "Acme Corp NCP Meals сдан клиенту"
-→ ЗАМЕНИТЬ на: "| Acme Corp NCP Meals | ✅ | Завершён | $XXK |"
+Old: "| Integra Construction пилотный объект | p1 | В переговорах | — |"
+New info: "Integra Construction подтвердил пилотный объект"
+→ ЗАМЕНИТЬ на: "| Integra Construction пилотный объект | ✅ | Пилот подтверждён | — |"
 ```
 
 **Пример 2 — Новое решение:**
 ```
 Добавить в Key Decisions таблицу:
-| 2026-02-01 | Отказ от X в пользу Y | причина | impact |
+| 2026-09-10 | Приоритет — субподряд, а не прямые тендеры | быстрее выйти на постоянный поток объёмов | impact |
 ```
 
 **Пример 3 — Изменение в pipeline:**
 ```
-Old: "| LogisticsLead | Hot | $XXK |"
-New info: "LogisticsLead подписал контракт"
+Old: "| Жилой фонд | Hot | пилот | — |"
+New info: "Жилой фонд подписал договор субподряда"
 → Удалить из Pipeline
 → Добавить в Hot Projects или Financial Context
 ```
@@ -155,8 +155,8 @@ New info: "LogisticsLead подписал контракт"
 
 ```
 Edit MEMORY.md:
-old_string: "| LogisticsLead | Hot | $XXK |"
-new_string: "| LogisticsLead | ✅ Signed | $XXK |"
+old_string: "| Жилой фонд | Hot | пилот |"
+new_string: "| Жилой фонд | ✅ Подписано | пилот |"
 ```
 
 ### В отчёте
@@ -246,7 +246,7 @@ business/
 
 ### Поиск клиента по имени
 
-1. Имя → kebab-case: "Acme Corp" → `acme-corp`, "Bi Group" → `bi-group`
+1. Имя → kebab-case: "Integra Construction" → `integra-construction`, "BI Group" → `bi-group`
 2. Искать: `business/crm/{kebab-case}.md`
 3. Если не найден — fuzzy search по `grep -l "{name}" business/crm/`
 
@@ -256,12 +256,12 @@ business/
 
 **В задачу:**
 ```
-"Follow-up [[business/crm/acme-corp|Acme Corp]] по снекам"
+"Follow-up [[business/crm/integra-construction|Integra Construction]] по пилотному объекту"
 ```
 
 **В thought:**
 ```
-Связано с: [[business/crm/techco|TechCo]], [[business/crm/phonebrand-smm|PhoneBrand SMM]]
+Связано с: [[business/crm/integra-construction|Integra Construction]], [[business/crm/zhiloy-fond|Жилой фонд]]
 ```
 
 ### Приоритет задач с бизнесом
@@ -287,25 +287,25 @@ client/project mention → link to Business/Projects + create task if actionable
 ### Структура:
 ```
 projects/
-├── _index.md       # Clients overview
-├── clients/        # Clients
-└── leads/          # Leads
+├── _index.md        # TRONIX — обзор направлений
+├── clients/          # Предприятия, подключённые к TRONIX DW
+└── leads/            # Потенциальные клиенты/партнёры TRONIX (Shop, DW, Точка Контакта)
 ```
 
 ### Распознавание упоминаний
 
 | Паттерн | Файл |
 |---------|------|
-| "[Client A]" | projects/clients/{client-a}.md |
-| "[Client B]" | projects/clients/{client-b}.md |
-| "AI обучение", "воркшоп" | projects/ контекст |
+| "TRONIX Shop", "сайт", "маркетплейс" | projects/ контекст (TRONIX Shop) |
+| Упоминание предприятия на TRONIX DW | projects/clients/{company}.md |
+| "Точка Контакта" | projects/ контекст (Точка Контакта) |
 
 ### Отличие от Business
 
-- **Business** = основной бизнес
-- **Projects** = личные проекты (консалтинг, обучение)
+- **Business** = IPC (обследования зданий и сооружений, тендеры, надзор)
+- **Projects** = TRONIX (Shop, DW, Точка Контакта) — другое направление, не основной бизнес по обследованиям
 
-Если entry упоминает AI/ML обучение — ищи в projects/ сначала.
+Если entry упоминает TRONIX — ищи в projects/ сначала.
 
 ## Contacts Context Integration
 
@@ -323,7 +323,7 @@ projects/
 | Индикатор | Категория | Vault Link |
 |-----------|-----------|------------|
 | Known business clients | business | `business/crm/{client}` |
-| AI/обучение expertise, known leads | projects | `projects/leads/{name}` |
+| TRONIX (Shop/DW/Точка Контакта), known leads | projects | `projects/leads/{name}` |
 | Остальные | personal | — |
 
 ### В отчёте
@@ -332,7 +332,7 @@ projects/
 
 ```html
 <b>👤 Упомянуто контактов:</b>
-• [Contact Name] (business → [[business/crm/acme-corp]])
+• [Contact Name] (business → [[business/crm/integra-construction]])
 • [Contact Name] (personal)
 ```
 
@@ -348,14 +348,14 @@ p4 — Operational, no goal alignment
 When creating tasks, prefer PROCESS over OUTCOME formulations.
 
 **Outcome (less effective):**
-- "Закрыть сделку с X"
-- "Запустить продукт"
-- "Подготовить программу"
+- "Закрыть сделку с Integra Construction"
+- "Запустить TRONIX Shop"
+- "Подготовить техзаключение"
 
 **Process (more effective):**
-- "Отправить follow-up клиенту X" (actionable, controllable)
-- "2h deep work на MVP" (time-bounded)
-- "Показать драфт программы коллеге" (checkpoint)
+- "Отправить follow-up Integra Construction" (actionable, controllable)
+- "2h deep work на сайт TRONIX Shop" (time-bounded)
+- "Показать драфт техзаключения Жене" (checkpoint)
 
 **When to transform:**
 - Entry sounds vague/outcome-focused → make it specific/process-focused
@@ -487,8 +487,8 @@ Read these files as needed:
 
 **Поиск клиента:**
 ```
-grep -l "Acme Corp" business/crm/
-→ business/crm/acme-corp.md
+grep -l "Integra Construction" business/crm/
+→ business/crm/integra-construction.md
 ```
 
 **Активные сделки:**

@@ -11,7 +11,7 @@ Before processing daily entries:
 
 2. **Read yearly goals:**
    ```
-   Read goals/1-yearly-2025.md → Know active goals by area
+   Read goals/1-yearly-2026.md → Know active goals by area
    ```
 
 3. **Check monthly priorities:**
@@ -51,11 +51,11 @@ If task aligns with goals, consider priority bump:
 When saving to thoughts/:
 
 1. **Check goal relevance:**
-   - Scan goals/1-yearly-2025.md for matching areas
+   - Scan goals/1-yearly-2026.md for matching areas
    - If matches → add link in frontmatter:
      ```yaml
      related:
-       - "[[goals/1-yearly-2025#Career & Business]]"
+       - "[[goals/1-yearly-2026#Career & Business]]"
      ```
 
 2. **Tag with goal area:**
@@ -98,7 +98,7 @@ Look for pattern:
 > [THE ONE THING]
 ```
 
-### 1-yearly-2025.md — Find Active Goals
+### 1-yearly-2026.md — Find Active Goals
 
 Look for tables:
 ```markdown
@@ -120,16 +120,16 @@ Look for section:
 
 ## Example Alignment
 
-Entry: "Нужно подготовить презентацию для клиента X"
+Entry: "Нужно подготовить предложение о сотрудничестве для Integra Construction"
 
 Check:
-- ONE Big Thing: "Ship MVP" → Not related
-- Monthly #1: "Client deliverables" → Related
-- Yearly: "Client Revenue" → Related
+- ONE Big Thing: "Составить список компаний и разослать предложения" → Related
+- Monthly #1: "Контракт с большой компанией" → Related
+- Yearly: "Партнёрство с крупной компанией" (Career & Business) → Related
 
 Result:
 ```
-Task: Подготовить презентацию для клиента X
-Description: → Monthly: Client deliverables → Goal: Client Revenue
+Task: Подготовить предложение о сотрудничестве для Integra Construction
+Description: → Weekly focus → Monthly: Контракт с большой компанией → Goal: Партнёрство с крупной компанией
 Priority: p2 (boosted from p3)
 ```

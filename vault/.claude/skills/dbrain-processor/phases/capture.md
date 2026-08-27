@@ -28,31 +28,31 @@ Print ONLY valid JSON (no markdown, no explanation):
 
 ```json
 {
-  "date": "2026-02-19",
-  "one_big_thing": "[Client A] NCP: POST-LAUNCH stabilization",
+  "date": "2026-09-05",
+  "one_big_thing": "Integra Construction: получить пробный объём и назначить встречу",
   "entries": [
     {
       "time": "10:30",
       "type": "voice",
-      "content": "Called Acme Corp about the project, discussed KPI",
+      "content": "Позвонил в Integra Construction, обсудили детали пилотного объекта",
       "classification": "task",
-      "task_content": "Follow-up Acme Corp: send KPI report",
+      "task_content": "Follow-up Integra Construction: отправить детали по пилотному объекту",
       "task_priority": 2,
       "task_due": "tomorrow",
-      "entities": ["business/crm/acme-corp"],
+      "entities": ["business/crm/integra-construction"],
       "goal_alignment": "ONE Big Thing"
     },
     {
       "time": "14:00",
       "type": "text",
-      "content": "AI agents need layered memory",
+      "content": "TRONIX Shop лучше запускать с новогодней акции",
       "classification": "idea",
-      "title": "AI agents need layered memory with decay scoring",
-      "description": "Pattern from analysis. Active memories decay if unused.",
+      "title": "Новогодняя акция как точка входа для TRONIX Shop",
+      "description": "Сезонный спрос под Новый год — шанс залететь красиво с первыми продажами.",
       "category": "ideas",
-      "tags": ["ai", "agents", "memory"],
-      "entities": [],
-      "goal_alignment": "yearly/AI Development"
+      "tags": ["tronix", "marketing"],
+      "entities": ["projects/tronix-shop"],
+      "goal_alignment": "yearly/Career & Business"
     }
   ],
   "stats": {
@@ -84,13 +84,13 @@ Print ONLY valid JSON (no markdown, no explanation):
 
 ### Process goal formulation
 When creating task_content, prefer PROCESS over OUTCOME:
-- WRONG: "Закрыть сделку с Acme Corp"
-- RIGHT: "Отправить follow-up Acme Corp: KPI отчёт за февраль"
+- WRONG: "Закрыть сделку с Integra Construction"
+- RIGHT: "Отправить follow-up Integra Construction: статус по пилотному объекту"
 
 ### Prose-as-title for thoughts
 When creating thought titles, use CLAIMS not topic labels:
-- WRONG: "Agent Memory System" (topic label)
-- RIGHT: "AI agents need layered memory with decay scoring" (specific claim)
+- WRONG: "TRONIX Shop маркетинг" (topic label)
+- RIGHT: "Новогодняя акция как точка входа для TRONIX Shop" (specific claim)
 Test: "Since [[title]], ..." should read naturally.
 
 ## Important

@@ -1,28 +1,31 @@
-# About [Your Name]
+# About Александр
 
 ## Who I Am
-[Your Name], [age]. [Your role/title] at [Your Company].
+Александр, 23 года. Аккредитованный эксперт по обследованию зданий и сооружений, сооснователь TOO Tronix.
 
 ## What I Do
-- [Main business activity]
-- [Side projects/interests]
+- Экспертное обследование зданий и сооружений — полный цикл от контракта до акта выполненных работ, с привлечением субподрядчиков (дефектоскопия, геодезия) под конкретные объекты; постоянных партнёров пока нет, объёмы разовые от разных контрагентов через тендеры
+- TRONIX Shop — интернет-магазин 3D-печатных изделий на базе TOO Tronix, вся операционка на мне (запуск, продажи, маркетинг, финансы, управление)
 
 ## My Team
+
 | Name | Role |
 |------|------|
-| [Your Name] | [Your Role] |
-| [Team Member] | [Their Role] |
+| Александр | Аккредитованный эксперт, руководитель |
+| Женя (брат) | Старший партнёр по инженерным заказам — находит людей, помогает с ресурсами |
+| Рома | Со-фаундер TOO Tronix (45%) |
+| Гена | Со-фаундер TOO Tronix (45%) |
 
 ## Working Style
-- Timezone: [Your Timezone]
-- Working hours: [Your preferred hours]
-- Languages: [Your languages]
+- Timezone: Asia/Almaty (Астана, UTC+5)
+- Working hours: 10:00–19:00
+- Languages: Русский
 
 ## Values
-- [Value 1]
-- [Value 2]
-- [Value 3]
+- Честность
+- Отдача
+- Любовь к делу
 
 ## Key Clients/Projects
-- [Client/Project 1] — [Brief description]
-- [Client/Project 2] — [Brief description]
+- TRONIX Shop — интернет-магазин 3D-печатных изделий (продажа сетов/наборов, печать под заказ, без склада)
+- Обследования — постоянных клиентов нет, приоритет 2026: выйти на партнёрство с одной из крупных компаний рынка (список целей ещё не составлен)

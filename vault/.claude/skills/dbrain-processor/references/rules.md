@@ -57,8 +57,8 @@ For tasks with details:
 Before saving any thought or task, check:
 - Это масштабируется?
 - Это можно автоматизировать?
-- Это усиливает экспертизу [Your Business]?
-- Это приближает к продукту/SaaS?
+- Это усиливает экспертизу или репутацию IPC/TRONIX?
+- Это приближает к постоянному потоку объёмов или к запуску TRONIX Shop?
 
 If 2+ yes → boost priority.
 

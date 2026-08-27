@@ -1,7 +1,7 @@
 ---
 type: weekly
-week: YYYY-WWW
-updated: YYYY-MM-DD
+week: 2026-W36
+updated: 2026-08-27
 ---
 
 # Weekly Focus
@@ -9,7 +9,7 @@ updated: YYYY-MM-DD
 ## ONE Big Thing
 
 > **If I accomplish nothing else, I will:**
-> [Single most important outcome for this week]
+> Составить и согласовать с Женей минимальный, тщательно отсортированный список компаний-целей и разослать им предложения о сотрудничестве.
 
 <!-- This is read by the bot during daily processing -->
 
@@ -17,9 +17,9 @@ updated: YYYY-MM-DD
 
 ## Week at a Glance
 
-**Week:** [X] of 52
-**Energy Level:** [High/Medium/Low]
-**Available Hours:** [X] hours focused work
+**Week:** 36 of 52
+**Energy Level:** Low
+**Available Hours:** полный рабочий день, точное число часов пока не определено
 
 ---
 
@@ -27,19 +27,18 @@ updated: YYYY-MM-DD
 
 ### Must Do (Non-negotiable)
 
-- [ ] Task 1 — Связь: [[1-yearly-2025#Goal]]
-- [ ] Task 2
-- [ ] Task 3
+- [ ] Составить и согласовать с [[zhenya|Женей]] список компаний-целей — Связь: [[goals-2026#Priority 1: Контракт с большой компанией]]
+- [ ] Разослать всем предложение о сотрудничестве
+- [ ] Утренняя рутина каждый день (зарядка + контрастный душ + медитация)
+- [ ] Продвинуться в понимании системы управления TRONIX Shop
 
 ### Should Do (Important)
 
-- [ ] Task 1
-- [ ] Task 2
+- [ ] Начать поиск человека под TRONIX Shop
 
 ### Could Do (If time permits)
 
-- [ ] Task 1
-- [ ] Task 2
+-
 
 ---
 
@@ -47,33 +46,28 @@ updated: YYYY-MM-DD
 
 ### Monday
 
-- [ ] Task 1
-- [ ] Task 2
+- [ ]
 
 ### Tuesday
 
-- [ ] Task 1
-- [ ] Task 2
+- [ ]
 
 ### Wednesday
 
-- [ ] Task 1
-- [ ] Task 2
+- [ ]
 
 ### Thursday
 
-- [ ] Task 1
-- [ ] Task 2
+- [ ]
 
 ### Friday
 
-- [ ] Task 1
-- [ ] Task 2
+- [ ]
 
 ### Weekend
 
 - [ ] Rest / Family time
-- [ ] Optional task
+- [ ]
 
 ---
 
@@ -90,9 +84,7 @@ updated: YYYY-MM-DD
 
 | Habit | Mon | Tue | Wed | Thu | Fri | Sat | Sun |
 |-------|-----|-----|-----|-----|-----|-----|-----|
-| [Habit 1] | | | | | | | |
-| [Habit 2] | | | | | | | |
-| [Habit 3] | | | | | | | |
+| Утренняя рутина (зарядка + душ + медитация) | | | | | | | |
 
 ---
 
@@ -118,10 +110,10 @@ updated: YYYY-MM-DD
 
 ## Links
 
-- [[2-monthly]] - Monthly priorities
-- [[1-yearly-2025]] - Yearly goals
+- [[monthly-focus-2026-09|2-monthly]] - Monthly priorities
+- [[goals-2026|1-yearly-2025]] - Yearly goals
 - Previous: [[3-weekly-YYYY-WXX]]
 
 ---
 
-*Week Started: YYYY-MM-DD*
+*Week Started: 2026-08-31*

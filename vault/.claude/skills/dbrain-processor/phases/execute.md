@@ -28,7 +28,7 @@ For each entry with classification idea/reflection/learning/project:
 - Add typed relationships in Related section:
   ```markdown
   ## Related
-  - [[business/crm/acme-corp|Acme Corp]] — context: discussed during project review
+  - [[business/crm/integra-construction|Integra Construction]] — context: обсуждение пилотного объекта
   ```
 
 ### 4. Update CRM
@@ -53,16 +53,16 @@ Print ONLY valid JSON:
 ```json
 {
   "tasks_created": [
-    {"id": "8501234567", "content": "Follow-up Acme Corp", "priority": 2, "due": "tomorrow"}
+    {"id": "8501234567", "content": "Follow-up Integra Construction", "priority": 2, "due": "tomorrow"}
   ],
   "thoughts_saved": [
-    {"path": "thoughts/ideas/2026-02-19-layered-memory.md", "title": "AI agents need layered memory", "category": "ideas"}
+    {"path": "thoughts/ideas/2026-09-05-tronix-shop-launch.md", "title": "Новогодняя акция как точка входа для TRONIX Shop", "category": "ideas"}
   ],
   "crm_updated": [
-    {"path": "business/crm/acme-corp.md", "change": "Added meeting note"}
+    {"path": "business/crm/integra-construction.md", "change": "Added meeting note"}
   ],
   "links_created": [
-    {"from": "thoughts/ideas/2026-02-19-layered-memory.md", "to": "business/crm/acme-corp.md", "context": "discussed during project review"}
+    {"from": "thoughts/ideas/2026-09-05-tronix-shop-launch.md", "to": "business/crm/integra-construction.md", "context": "упомянуто в контексте пилотного объекта"}
   ],
   "process_goals": {
     "active": 5,

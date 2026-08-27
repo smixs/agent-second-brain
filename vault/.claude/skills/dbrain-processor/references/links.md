@@ -39,7 +39,7 @@ Find related entries.
 Check if thought relates to goals:
 
 ```
-Read goals/1-yearly-2025.md
+Read goals/1-yearly-2026.md
 Find matching goal areas
 ```
 
@@ -50,21 +50,21 @@ In the thought file, add **typed relationships** — each link explains WHY it's
 **In frontmatter (for graph analysis):**
 ```yaml
 related:
-  - "[[thoughts/ideas/2024-12-15-voice-agents]]"
-  - "[[goals/1-yearly-2026#AI Development]]"
+  - "[[thoughts/ideas/2026-09-05-tronix-shop-launch]]"
+  - "[[goals/1-yearly-2026#Career & Business]]"
 ```
 
 **In content (inline):**
 ```markdown
-This connects to [[Voice Agents Architecture]] we explored earlier.
+This connects to [[TRONIX Shop Launch Plan]] we explored earlier.
 ```
 
 **In Related section (with context phrases):**
 ```markdown
 ## Related
-- [[thoughts/ideas/voice-agents-architecture|Voice Agents]] — extends: real-time TTS pipeline
-- [[business/crm/acme-corp|Acme Corp]] — context: NCP campaign uses similar approach
-- [[goals/1-yearly-2026#AI Development]] — supports: yearly AI skill goal
+- [[thoughts/ideas/tronix-shop-launch|TRONIX Shop Launch Plan]] — extends: новогодняя акция
+- [[business/crm/integra-construction|Integra Construction]] — context: похожий подход к пилотному объекту
+- [[goals/1-yearly-2026#Career & Business]] — supports: годовая цель по TRONIX Shop
 ```
 
 ### Relationship Types
@@ -73,12 +73,12 @@ Use context phrases after `—` to explain the connection:
 
 | Type | When to use | Example |
 |------|------------|---------|
-| extends | Builds on another idea | `— extends: adds TTS to voice pipeline` |
-| context | Background/origin of idea | `— context: emerged from client project` |
-| supports | Aligns with a goal | `— supports: Q1 revenue target` |
-| contradicts | Challenges existing note | `— contradicts: previous approach was sync` |
-| enables | Makes something possible | `— enables: automated daily reports` |
-| requires | Dependency | `— requires: mcp-cli working` |
+| extends | Builds on another idea | `— extends: добавляет новогоднюю акцию к плану запуска` |
+| context | Background/origin of idea | `— context: возникло из переговоров с Integra Construction` |
+| supports | Aligns with a goal | `— supports: годовая цель по TRONIX Shop` |
+| contradicts | Challenges existing note | `— contradicts: предыдущий подход был другим` |
+| enables | Makes something possible | `— enables: автоматические отчёты по обследованиям` |
+| requires | Dependency | `— requires: найден человек под TRONIX Shop` |
 
 ### Step 5: Update MOC Index
 
@@ -88,12 +88,11 @@ Add new note to appropriate MOC:
 # MOC: Ideas
 
 ## Recent
-- [[thoughts/ideas/2024-12-20-new-idea.md]] — Brief description
+- [[thoughts/ideas/2026-09-05-tronix-shop-launch.md]] — Новогодняя акция как точка входа
 
 ## By Topic
-### AI & Voice
-- [[thoughts/ideas/2024-12-20-new-idea.md]]
-- [[thoughts/ideas/2024-12-15-voice-agents.md]]
+### TRONIX
+- [[thoughts/ideas/2026-09-05-tronix-shop-launch.md]]
 ```
 
 ### Step 6: Add Backlinks
@@ -112,7 +111,7 @@ In related notes, add backlink to new note if highly relevant.
 
 ### Link to Goals
 ```markdown
-[[goals/1-yearly-2025#Career & Business]]
+[[goals/1-yearly-2026#Career & Business]]
 [[goals/3-weekly]] — ONE Big Thing
 ```
 
@@ -124,29 +123,29 @@ In related notes, add backlink to new note if highly relevant.
 
 | Тип | Формат | Пример |
 |-----|--------|--------|
-| Клиент | `[[business/crm/{name}\|Display]]` | `[[business/crm/acme-corp\|Acme Corp]]` |
-| Проект | `[[projects/{name}\|Display]]` | `[[projects/project-alpha\|Project Alpha]]` |
-| CRM Lead | `[[business/crm/{name}\|Display]]` | `[[business/crm/techco\|TechCo]]` |
+| Клиент | `[[business/crm/{name}\|Display]]` | `[[business/crm/integra-construction\|Integra Construction]]` |
+| Проект | `[[projects/{name}\|Display]]` | `[[projects/tronix-shop\|TRONIX Shop]]` |
+| CRM Lead | `[[business/crm/{name}\|Display]]` | `[[business/crm/zhiloy-fond\|Жилой фонд]]` |
 
 ### Где добавлять связи (с typed context)
 
 **В daily file (комментарий):**
 ```markdown
 ## 10:30 [voice]
-Позвонил в Acme Corp по проекту
-<!-- связь: [[business/crm/acme-corp]] -->
+Позвонил в Integra Construction по проекту
+<!-- связь: [[business/crm/integra-construction]] -->
 ```
 
 **В thoughts (Related section с context phrases):**
 ```markdown
 ## Related
-- [[business/crm/techco|TechCo]] — context: обсуждение BTL стратегии
-- [[business/crm/phonebrand|PhoneBrand]] — extends: SMM стратегия 2026
+- [[business/crm/zhiloy-fond|Жилой фонд]] — context: обсуждение условий субподряда
+- [[projects/tronix-shop|TRONIX Shop]] — extends: план новогодней акции
 ```
 
 **В task-записи (контекст):**
 ```
-Description: "Клиент: [[business/crm/acme-corp|Acme Corp]]"
+Description: "Клиент: [[business/crm/integra-construction|Integra Construction]]"
 ```
 
 ---
@@ -163,36 +162,36 @@ Track new links created:
 
 ## Example Workflow
 
-New thought: "Chatterbox TTS can be used for voice agents"
+New thought: "Новогодняя акция — хороший способ запустить TRONIX Shop"
 
 1. **Search:**
-   - Grep "voice" in thoughts/ → finds [[Voice Agents Architecture]]
-   - Grep "TTS" in thoughts/ → no results
-   - Grep "Chatterbox" → no results
+   - Grep "TRONIX Shop" в thoughts/ → находит [[TRONIX Shop Launch Plan]]
+   - Grep "акция" в thoughts/ → нет результатов
+   - Grep "новогодняя" → нет результатов
 
 2. **Check MOC:**
-   - MOC-learnings.md has "AI & Voice" section
+   - MOC-ideas.md has "TRONIX" section
 
 3. **Goals:**
-   - 1-yearly-2025.md has "AI Development" goal
+   - 1-yearly-2026.md has "Career & Business" goal (Goal 2: Запуск TRONIX Shop)
 
 4. **Create links:**
    ```yaml
    related:
-     - "[[thoughts/ideas/voice-agents-architecture.md]]"
-     - "[[goals/1-yearly-2025#AI Development]]"
+     - "[[thoughts/ideas/tronix-shop-launch-plan.md]]"
+     - "[[goals/1-yearly-2026#Career & Business]]"
    ```
 
-5. **Update MOC-learnings.md:**
+5. **Update MOC-ideas.md:**
    ```markdown
-   ### AI & Voice
-   - [[thoughts/learnings/2024-12-20-chatterbox-tts.md]] — TTS for voice agents
+   ### TRONIX
+   - [[thoughts/ideas/2026-09-05-tronix-new-year-promo.md]] — новогодняя акция для запуска
    ```
 
 6. **Report:**
    ```
    <b>🔗 Новые связи:</b>
-   • [[Chatterbox TTS]] ↔ [[Voice Agents Architecture]]
+   • [[Новогодняя акция]] ↔ [[TRONIX Shop Launch Plan]]
    ```
 
 ## Orphan Detection

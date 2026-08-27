@@ -1,59 +1,54 @@
 ---
 type: monthly
-period: YYYY-MM
-updated: YYYY-MM-DD
+period: 2026-09
+updated: 2026-08-27
 ---
 
 # Monthly Focus
 
 ## Top 3 Priorities
 
-### Priority 1: [Your Top Priority]
-<!-- What MUST happen this month? -->
-
-**Why it matters:** [connection to yearly goal]
+### Priority 1: Контракт с большой компанией
+**Why it matters:** ключевая цель года по бизнесу — получить пробный объём от крупного игрока, отработать достойно, получить повторный заказ
 
 **Key Actions:**
-- [ ] Action 1
-- [ ] Action 2
-- [ ] Action 3
+- [ ] Составить минимальный, тщательно отсортированный список компаний-целей, согласованный с [[zhenya|Женей]]
+- [ ] Направить всем предложение о сотрудничестве
+- [ ] Назначить встречи/звонки по откликам
 
-**Definition of Done:** [clear outcome]
+**Definition of Done:** назначена встреча/звонок, которые ведут к подписанию договора
 
 ---
 
-### Priority 2: [Second Priority]
-
-**Why it matters:** [connection to yearly goal]
+### Priority 2: Ясность и запуск TRONIX Shop
+**Why it matters:** годовая цель — полный запуск сайта и первые продажи к Новому году; доли в компании уже распределены, но операционка пока не закрыта
 
 **Key Actions:**
-- [ ] Action 1
-- [ ] Action 2
-- [ ] Action 3
+- [ ] Найти человека, который доведёт сайт до ума и запустит его
+- [ ] Определить, кто будет управлять и вести TRONIX Shop дальше
+- [ ] Продумать, как бизнес будет работать при резком наплыве большого количества заказов
 
-**Definition of Done:** [clear outcome]
+**Definition of Done:** сайт запущен и готов к пиару и выходу в люди; есть полное понимание, как бизнес справится с резким наплывом заказов
 
 ---
 
-### Priority 3: [Third Priority]
-
-**Why it matters:** [connection to yearly goal]
+### Priority 3: Утренняя рутина
+**Why it matters:** первый шаг к здоровью и энергии из годовых и 3-летних целей — фундамент, без которого сложно тянуть остальное
 
 **Key Actions:**
-- [ ] Action 1
-- [ ] Action 2
-- [ ] Action 3
+- [ ] Зарядка каждое утро
+- [ ] Контрастный душ каждое утро
+- [ ] Медитация каждое утро
 
-**Definition of Done:** [clear outcome]
+**Definition of Done:** рутина выполняется каждый день без пропусков
 
 ---
 
 ## NOT Doing This Month
 
-<!-- What are you consciously saying NO to? -->
--
--
--
+- Личная жизнь — не в фокусе сейчас
+- Проектирование и другие направления строительства — не распыляться
+- Остальные направления TRONIX, кроме TRONIX Shop — интерес к ним сейчас сильно меньше
 
 ---
 
@@ -86,10 +81,9 @@ updated: YYYY-MM-DD
 
 ## Links
 
-- [[0-vision-3y]] - 3-year vision
-- [[1-yearly-2025]] - Annual goals
+- [[vision-2025-2027|0-vision-3y]] - 3-year vision
+- [[goals-2026|1-yearly-2025]] - Annual goals
 - [[3-weekly]] - This week's plan
 
 ---
-
 *Next Review: End of month*

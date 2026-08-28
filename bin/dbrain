@@ -1,10 +1,10 @@
 #!/bin/bash
-# dbrain — one command to control your d-brain assistant.
+# dbrain — one command to control the second brain.
 #
-# Usage: dbrain <status|restart|logs|doctor|clear|attach|repair|login>
+# Usage: dbrain <status|restart|logs|doctor|clear|reset|attach|repair|login>
 #
-# Designed for non-technical users: every command prints plain-language output
-# and the next thing to try if something is wrong.
+# Every command prints plain-language output and the next thing to try if
+# something is wrong.
 set -euo pipefail
 
 RUNTIME_DIR="${DBRAIN_RUNTIME_DIR:-$HOME/.dbrain}"
@@ -21,18 +21,20 @@ case "$cmd" in
   status)
     echo "📋 Статус d-brain"
     if [ -f "$RUNTIME_DIR/STATUS.md" ]; then cat "$RUNTIME_DIR/STATUS.md"; else echo "(нет STATUS.md — watchdog ещё не запускался)"; fi
-    echo "— bot:      $(systemctl --user is-active dbrain-bot.service 2>/dev/null || echo unknown)"
-    echo "— watchdog: $(systemctl --user is-active dbrain-watchdog.service 2>/dev/null || echo unknown)"
+    echo "— сервис:   $(systemctl --user is-active brain.service 2>/dev/null || echo unknown)"
     if tmux has-session -t "$BRAIN" 2>/dev/null; then echo "— мозг:     жив ($BRAIN)"; else echo "— мозг:     НЕ запущен"; fi
+    if [ -f "$RUNTIME_DIR/rate_limit.json" ]; then
+      echo "— лимит:    $(cat "$RUNTIME_DIR/rate_limit.json")"
+    fi
     ;;
   restart)
     echo "♻️  Перезапускаю сервисы…"
-    systemctl --user reset-failed dbrain-bot.service dbrain-watchdog.service 2>/dev/null || true
-    systemctl --user restart dbrain-bot.service dbrain-watchdog.service
+    systemctl --user reset-failed brain.service 2>/dev/null || true
+    systemctl --user restart brain.service
     echo "Готово. Проверь: dbrain status"
     ;;
   logs)
-    journalctl --user -u dbrain-bot.service -n "${2:-80}" --no-pager 2>/dev/null || echo "Логи недоступны (нет systemd --user?)"
+    journalctl --user -u brain.service -n "${2:-80}" --no-pager 2>/dev/null || echo "Логи недоступны (нет systemd --user?)"
     ;;
   doctor)
     echo "🩺 Запускаю осмотр…"
@@ -49,10 +51,21 @@ case "$cmd" in
   attach)
     exec tmux attach -t "$BRAIN"
     ;;
+  reset)
+    echo "♻️  Жёсткий сброс сессии…"
+    # Order matters: drop the remembered limit FIRST, so the session the bot
+    # rebuilds isn't immediately gated by a record from before the reset.
+    rm -f "$RUNTIME_DIR/rate_limit.json" "$RUNTIME_DIR/inflight" "$RUNTIME_DIR/ready"
+    tmux kill-session -t "$BRAIN" 2>/dev/null || true
+    tmux kill-session -t "${BRAIN}_cron" 2>/dev/null || true
+    echo "Готово. Мозг поднимется при следующем сообщении. В Telegram то же самое: /reset"
+    ;;
   repair)
-    echo "🔧 Чиню: сброс ошибок + перезапуск…"
-    systemctl --user reset-failed dbrain-bot.service dbrain-watchdog.service 2>/dev/null || true
-    systemctl --user restart dbrain-bot.service dbrain-watchdog.service 2>/dev/null || true
+    echo "🔧 Чиню: сброс ошибок + сброс сессии + перезапуск…"
+    rm -f "$RUNTIME_DIR/rate_limit.json" "$RUNTIME_DIR/inflight" "$RUNTIME_DIR/ready"
+    tmux kill-session -t "$BRAIN" 2>/dev/null || true
+    systemctl --user reset-failed brain.service 2>/dev/null || true
+    systemctl --user restart brain.service 2>/dev/null || true
     echo "Если не помогло, посмотри: dbrain logs"
     ;;
   login)
@@ -72,7 +85,7 @@ case "$cmd" in
     echo "Готово. Бот поднимет сессию заново при следующем сообщении. Проверь: dbrain status"
     ;;
   *)
-    echo "Usage: dbrain <status|restart|logs|doctor|clear|attach|repair|login>"
+    echo "Usage: dbrain <status|restart|logs|doctor|clear|reset|attach|repair|login>"
     exit 1
     ;;
 esac

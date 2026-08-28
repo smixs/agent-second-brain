@@ -45,10 +45,28 @@ class Settings(BaseSettings):
     )
     tz: str = Field(default="UTC", description="Timezone for timers/reports")
 
+    # ── liveness ─────────────────────────────────────────────────────
+    watchdog_enabled: bool = Field(
+        default=True,
+        description="Run the session watchdog inside the bot process",
+    )
+    watchdog_tick_seconds: float = Field(
+        default=15.0,
+        description="Watchdog tick interval",
+    )
+
     # ── cron (scheduled jobs in the second brain session) ────────────
     cron_enabled: bool = Field(
         default=True,
         description="Run the in-bot cron ticker",
+    )
+    cron_isolated_session: bool = Field(
+        default=False,
+        description=(
+            "Give cron its own Claude session. Costs a second always-on "
+            "Claude Code process (hundreds of MB) — off by default so a small "
+            "VPS runs one brain; jobs share the main session as maint- turns."
+        ),
     )
     cron_tick_seconds: float = Field(
         default=60.0,

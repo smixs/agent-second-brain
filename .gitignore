@@ -41,3 +41,13 @@ vault/thoughts/
 /.agents/
 /.claude/
 /skills-lock.json
+
+# Obsidian UI state — меняется от каждого клика, в git не нужен
+vault/.obsidian/workspace.json
+vault/.obsidian/workspace-mobile.json
+
+# Runtime state
+vault/.sessions/
+
+# Плагины Obsidian — бандлы по сотне-другой КБ, ставятся из самого Obsidian
+vault/.obsidian/plugins/

@@ -1,4 +1,4 @@
-"""Button handlers for reply keyboard."""
+"""Button handlers for the reply keyboard — thin aliases for the commands."""
 
 from aiogram import F, Router
 from aiogram.types import Message
@@ -8,7 +8,6 @@ router = Router(name="buttons")
 
 @router.message(F.text == "📊 Статус")
 async def btn_status(message: Message) -> None:
-    """Handle Status button."""
     from d_brain.bot.handlers.commands import cmd_status
 
     await cmd_status(message)
@@ -16,15 +15,13 @@ async def btn_status(message: Message) -> None:
 
 @router.message(F.text == "⚙️ Обработать")
 async def btn_process(message: Message) -> None:
-    """Handle Process button."""
     from d_brain.bot.handlers.process import cmd_process
 
     await cmd_process(message)
 
 
-@router.message(F.text == "❓ Помощь")
-async def btn_help(message: Message) -> None:
-    """Handle Help button."""
-    from d_brain.bot.handlers.commands import cmd_help
+@router.message(F.text == "♻️ Сброс")
+async def btn_reset(message: Message) -> None:
+    from d_brain.bot.handlers.commands import cmd_reset
 
-    await cmd_help(message)
+    await cmd_reset(message)

@@ -30,8 +30,10 @@ import uuid
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
+from d_brain.services.rate_limit import RateLimitRecord, RateLimitState
 from d_brain.services.tmux_parse import (
     PaneState,
     classify_state,
@@ -40,6 +42,7 @@ from d_brain.services.tmux_parse import (
     is_complete,
     is_idle,
     is_working,
+    rate_limit_banner,
     strip_chrome,
 )
 
@@ -49,6 +52,13 @@ Runner = Callable[..., subprocess.CompletedProcess]
 
 DEFAULT_TIMEOUT = 1200  # 20 min, matches the old subprocess pipeline
 DEFAULT_STALL_TIMEOUT = 180  # no new pane bytes for this long ⇒ wedged
+# Cap on waiting for the pane lock. A turn can legitimately hold it for
+# DEFAULT_TIMEOUT, but NOTHING may wait on it forever: an unbounded blocking
+# flock in a bot handler froze the whole event loop for up to 20 minutes.
+DEFAULT_LOCK_TIMEOUT = 30.0
+# Repaint grace after wiping a stale limit banner, before the pane state is
+# trusted again.
+_PROBE_GRACE = 5.0
 # request_id prefix that marks a turn as maintenance (pipeline, doctor,
 # /process) — such turns are never steering targets for chat input.
 MAINT_PREFIX = "maint-"
@@ -98,6 +108,8 @@ class ClaudeSession:
         paste_settle: float = 0.3,
         startup_timeout: float = 90.0,
         stall_timeout: float = DEFAULT_STALL_TIMEOUT,
+        lock_timeout: float = DEFAULT_LOCK_TIMEOUT,
+        now_fn: Callable[[], datetime] | None = None,
     ) -> None:
         self.session_name = session_name
         self.work_dir = Path(work_dir)
@@ -127,6 +139,7 @@ class ClaudeSession:
         self._paste_settle = paste_settle
         self._startup_timeout = startup_timeout
         self._stall_timeout = stall_timeout
+        self._lock_timeout = lock_timeout
 
         # Address the session's active window/pane by name. A fixed ":0.0"
         # breaks under `base-index 1` (window 0 won't exist) → empty capture.
@@ -135,6 +148,13 @@ class ClaudeSession:
         self._ready_flag = self.runtime_dir / "ready"
         self._inflight = self.runtime_dir / "inflight"
         self._pane_lock = self.runtime_dir / "pane.lock"
+        # Rate-limit state with an expiry, shared with the watchdog and cron.
+        # Without it the limit banner on screen is self-perpetuating: ask()
+        # refuses to type, so nothing ever scrolls the banner away.
+        self._rate_limit = RateLimitState(
+            self.runtime_dir / "rate_limit.json",
+            **({"now_fn": now_fn} if now_fn else {}),
+        )
 
     # ── tmux helpers ─────────────────────────────────────────────────
 
@@ -182,14 +202,34 @@ class ClaudeSession:
     # ── file lock (single lock; see module docstring) ────────────────
 
     @contextmanager
-    def _locked(self, *, blocking: bool = True):
+    def _locked(self, *, blocking: bool = True, timeout: float | None = None):
+        """Hold the pane lock. Yields False when it could not be taken.
+
+        ``timeout`` bounds the wait by polling a non-blocking flock — an
+        UNBOUNDED wait is what let `/new` freeze the whole bot behind a
+        20-minute turn. ``timeout=None`` keeps the old wait-forever behaviour
+        for callers that own their thread (ask()).
+        """
         fd = os.open(self._pane_lock, os.O_CREAT | os.O_RDWR, 0o644)
         acquired = False
         try:
-            flags = fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB)
-            fcntl.flock(fd, flags)
-            acquired = True
-            yield True
+            if blocking and timeout is not None:
+                deadline = self._clock() + timeout
+                while True:
+                    try:
+                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        acquired = True
+                        break
+                    except BlockingIOError:
+                        if self._clock() >= deadline:
+                            break
+                        self._sleep(min(self._poll_interval, 0.5))
+                yield acquired
+            else:
+                flags = fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB)
+                fcntl.flock(fd, flags)
+                acquired = True
+                yield True
         except BlockingIOError:
             yield False
         finally:
@@ -298,11 +338,34 @@ class ClaudeSession:
         with self._locked(blocking=False) as got:
             if not got:
                 return False
-            self._tmux("kill-session", "-t", self.session_name)
-            self._ready_flag.unlink(missing_ok=True)
-            self._inflight.unlink(missing_ok=True)
-            self._ensure_locked()
+            self._recreate_locked()
             return True
+
+    def hard_reset(self) -> bool:
+        """Operator escape hatch (Telegram /reset): recreate the session even
+        if a turn is in flight.
+
+        force_recover() politely defers to a live turn — but a WEDGED turn is
+        exactly what the user is trying to clear, so this one takes the lock
+        if it can and proceeds regardless when it cannot. Returns True when
+        the lock was free (a clean recovery), False when a turn was killed
+        underneath. Either way the session comes back and every stuck marker
+        — inflight, the rate-limit record, the stale pane — is gone.
+        """
+        with self._locked(blocking=False) as got:
+            self._recreate_locked()
+            return got
+
+    def _recreate_locked(self) -> None:
+        """Kill and rebuild the session, dropping all per-turn state."""
+        self._tmux("kill-session", "-t", self.session_name)
+        self._ready_flag.unlink(missing_ok=True)
+        self._inflight.unlink(missing_ok=True)
+        # A fresh session cannot be showing last hour's limit banner, so the
+        # recorded limit is meaningless now — keeping it would re-block the
+        # very turn the user just asked for.
+        self._rate_limit.clear()
+        self._ensure_locked()
 
     def kill(self) -> None:
         """Tear down the session (lock-guarded). For CLI/teardown use."""
@@ -354,20 +417,50 @@ class ClaudeSession:
             return False
         return not first.startswith(MAINT_PREFIX)
 
-    def send_control(self, text: str) -> None:
+    def send_control(self, text: str) -> bool:
         """Type a client-side Claude Code command verbatim, fire-and-forget.
 
         Control commands (/clear, /model, …) produce no model turn and thus
-        no marker pair — there is nothing to extract, so don't wait.
+        no marker pair — there is nothing to extract, so don't wait. Returns
+        False when the pane was busy: bounded by lock_timeout, because this
+        runs on behalf of a chat command and must not wait out a long turn.
         """
-        with self._locked() as got:
+        with self._locked(timeout=self._lock_timeout) as got:
             if got:
                 self._send_text(text)
                 self._send_enter()
+            return got
 
-    def clear(self) -> None:
+    def clear(self) -> bool:
         """Manual recovery only (durable-state-first: no scheduled clear)."""
-        self.send_control("/clear")
+        return self.send_control("/clear")
+
+    def _clear_pane(self) -> None:
+        """Wipe stale text so a resolved banner cannot be read again.
+
+        /clear resets both the TUI screen and the conversation; clear-history
+        drops the scrollback our capture reaches into (-S -200). Caller must
+        hold the lock. Best effort — the real proof that a limit is over is
+        the probe prompt that follows, not this.
+        """
+        self._send_text("/clear")
+        self._send_enter()
+        self._sleep(self._paste_settle)
+        self._tmux("clear-history", "-t", self._target)
+
+    # ── rate limit (durable, with an expiry — see services/rate_limit.py) ──
+
+    def rate_limit_active(self) -> bool:
+        """True while a recorded limit is still expected to hold."""
+        return self._rate_limit.active()
+
+    def rate_limit_status(self) -> tuple[RateLimitRecord | None, bool]:
+        """``(record, still_holding)`` — see RateLimitState.status()."""
+        return self._rate_limit.status()
+
+    def clear_rate_limit(self) -> None:
+        """Forget a recorded limit — /reset and manual recovery."""
+        self._rate_limit.clear()
 
     # ── sending ──────────────────────────────────────────────────────
 
@@ -420,9 +513,22 @@ class ClaudeSession:
         wrap=False types the prompt verbatim; completion is the pane sitting
         idle for two consecutive polls and the reply is the chrome-stripped
         pane text (best effort, may include the input echo).
+
+        A rate limit is remembered WITH AN EXPIRY: inside the window we answer
+        immediately without touching tmux; past it we wipe the stale banner
+        and probe with a real prompt, so a reset limit heals itself.
         """
         rid = self._rid_factory()
         log_id = request_id or rid
+        # Cheap gate BEFORE the lock: a known-live limit needs no tmux at all.
+        rec, holding = self._rate_limit.status()
+        if holding and rec is not None:
+            return AskResult(
+                "rate_limited",
+                detail=f"until {rec.until.isoformat(timespec='minutes')}",
+            )
+        # rec present but lapsed ⇒ the banner on screen is stale by definition.
+        probing = rec is not None
         with self._locked() as got:
             if not got:  # only happens with non-blocking; blocking=True here
                 return AskResult("error", detail="could not acquire pane lock")
@@ -437,24 +543,47 @@ class ClaudeSession:
                 self._inflight.unlink(missing_ok=True)
                 return AskResult("error", detail=f"session start failed: {exc}")
 
-            pre = classify_state(self._capture())
-            if pre == PaneState.RATE_LIMITED:
-                self._inflight.unlink(missing_ok=True)
-                return AskResult("rate_limited")
-            if pre == PaneState.LOGGED_OUT:
-                self._inflight.unlink(missing_ok=True)
-                return AskResult("logged_out")
+            cap = self._capture()
+            pre = classify_state(cap)
+            if probing:
+                # The recorded window lapsed, so whatever the pane says about
+                # limits is stale. Send the prompt WITHOUT trusting `pre`:
+                # only a real turn proves the limit is gone. Trusting it here
+                # is exactly what made the status stick — the screen still
+                # showed last hour's banner, so we never typed, so the screen
+                # never changed.
+                logger.info("rate-limit window lapsed — probing the session")
+                self._rate_limit.clear()
+                if pre == PaneState.RATE_LIMITED:
+                    # Only wipe when the banner is actually still up: /clear
+                    # costs the conversation context, and by now the pane has
+                    # usually repainted on its own.
+                    self._clear_pane()
+                else:
+                    probing = False  # nothing wiped ⇒ no repaint grace needed
+            else:
+                if pre == PaneState.RATE_LIMITED:
+                    self._rate_limit.record(rate_limit_banner(cap) or "")
+                    self._inflight.unlink(missing_ok=True)
+                    return AskResult("rate_limited")
+                if pre == PaneState.LOGGED_OUT:
+                    self._inflight.unlink(missing_ok=True)
+                    return AskResult("logged_out")
 
             self._send_prompt(prompt, rid, wrap=wrap)
 
             last_active = self._clock()
             last_log_size = self._pane_log_size()
             deadline = self._clock() + timeout
+            # After a probe the TUI needs a moment to repaint; until it has,
+            # leftovers of the wiped banner must not re-arm the limit.
+            grace_until = self._clock() + (_PROBE_GRACE if probing else 0.0)
             idle_streak = 0
             while self._clock() < deadline:
                 cap = self._capture()
                 state = classify_state(cap)
-                if state == PaneState.RATE_LIMITED:
+                if state == PaneState.RATE_LIMITED and self._clock() >= grace_until:
+                    self._rate_limit.record(rate_limit_banner(cap) or "")
                     self._inflight.unlink(missing_ok=True)
                     return AskResult("rate_limited")
                 if state == PaneState.LOGGED_OUT:
@@ -462,11 +591,14 @@ class ClaudeSession:
                     return AskResult("logged_out")
                 if wrap:
                     if is_complete(cap, rid):
+                        # A completed turn is proof there is no active limit.
+                        self._rate_limit.clear()
                         self._inflight.unlink(missing_ok=True)
                         return AskResult("ok", reply=extract_reply(cap, rid))
                 elif is_idle(cap):
                     idle_streak += 1
                     if idle_streak >= 2:
+                        self._rate_limit.clear()
                         self._inflight.unlink(missing_ok=True)
                         return AskResult("ok", reply=strip_chrome(cap))
                 else:

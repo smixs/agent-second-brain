@@ -283,7 +283,7 @@ Check:
 
 ```bash
 dbrain status
-systemctl --user is-active dbrain-bot dbrain-watchdog dbrain-process.timer dbrain-doctor.timer
+systemctl --user is-active brain.service brain-daily.timer
 ```
 
 ---
@@ -324,16 +324,16 @@ If prompted for password, use Personal Access Token:
 dbrain status
 
 # Restart bot (the brain session survives — KillMode=process)
-systemctl --user restart dbrain-bot
+systemctl --user restart brain.service
 
 # Stop bot
-systemctl --user stop dbrain-bot
+systemctl --user stop brain.service
 
 # Real-time logs
-journalctl --user -u dbrain-bot -f
+journalctl --user -u brain.service -f
 
 # Last 100 log lines
-journalctl --user -u dbrain-bot -n 100
+journalctl --user -u brain.service -n 100
 
 # All dbrain services
 systemctl --user status 'dbrain-*'
@@ -358,16 +358,16 @@ bash upgrade.sh
 
 ```bash
 dbrain status
-journalctl --user -u dbrain-bot -n 100
+journalctl --user -u brain.service -n 100
 cat ~/projects/agent-second-brain/.env | grep TELEGRAM_BOT_TOKEN
-systemctl --user restart dbrain-bot
+systemctl --user restart brain.service
 ```
 
 ### Voice not transcribing
 
 ```bash
 cat ~/projects/agent-second-brain/.env | grep DEEPGRAM
-journalctl --user -u dbrain-bot | grep -i error
+journalctl --user -u brain.service | grep -i error
 ```
 
 ### Processing errors

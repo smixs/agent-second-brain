@@ -46,29 +46,31 @@ else
     echo "  installed ~/.local/bin/dbrain (ensure it's on PATH)"
 fi
 
-say "6/8 Migrating systemd --user units (d-brain-* → dbrain-*)"
+say "6/8 Installing systemd --user units (brain.service + brain-daily.timer)"
 mkdir -p "$USER_UNITS"
-# Stop/disable legacy units if present.
+# Retire every generation of legacy units: d-brain-*, the weekly digest, and
+# the v3 split (separate watchdog / doctor / notify), now folded into one
+# supervised process inside brain.service.
 systemctl --user disable --now \
-    d-brain-bot.service d-brain-process.timer d-brain-weekly.timer 2>/dev/null || true
-rm -f "$USER_UNITS"/d-brain-*.service "$USER_UNITS"/d-brain-*.timer
-# v3.0 migration: the weekly digest is removed — retire its units on upgrade.
-systemctl --user disable --now dbrain-weekly.timer dbrain-weekly.service 2>/dev/null || true
-rm -f "$USER_UNITS"/dbrain-weekly.service "$USER_UNITS"/dbrain-weekly.timer
+    d-brain-bot.service d-brain-process.timer d-brain-weekly.timer \
+    dbrain-weekly.timer dbrain-weekly.service \
+    dbrain-bot.service dbrain-watchdog.service \
+    dbrain-process.timer dbrain-process.service \
+    dbrain-doctor.timer dbrain-doctor.service 2>/dev/null || true
+rm -f "$USER_UNITS"/d-brain-*.service "$USER_UNITS"/d-brain-*.timer \
+      "$USER_UNITS"/dbrain-*.service "$USER_UNITS"/dbrain-*.timer
 # Install new units, pointing WorkingDirectory/ExecStart at the real path.
-for f in "$PROJECT_DIR"/deploy/dbrain-*.service "$PROJECT_DIR"/deploy/dbrain-*.timer; do
+for f in "$PROJECT_DIR"/deploy/brain*.service "$PROJECT_DIR"/deploy/brain*.timer; do
     sed "s|%h/projects/dbrain|$PROJECT_DIR|g" "$f" > "$USER_UNITS/$(basename "$f")"
 done
 systemctl --user daemon-reload
 loginctl enable-linger "$USER" 2>/dev/null || echo "  ⚠ could not enable linger (services won't start on boot without it)"
-systemctl --user enable \
-    dbrain-bot.service dbrain-watchdog.service \
-    dbrain-process.timer dbrain-doctor.timer
-# restart (not just enable --now): on a re-run the units may have changed, and
+systemctl --user enable brain.service brain-daily.timer
+# restart (not just enable --now): on a re-run the unit may have changed, and
 # enable --now won't re-apply a new unit to an already-running service.
-# KillMode=process means restarting the bot/watchdog does NOT kill the brain.
-systemctl --user restart dbrain-bot.service dbrain-watchdog.service
-systemctl --user start dbrain-process.timer dbrain-doctor.timer
+# KillMode=process means restarting the bot does NOT kill the brain.
+systemctl --user restart brain.service
+systemctl --user start brain-daily.timer
 
 # Privacy repair for existing installs: the runtime dir holds the full pane
 # transcript (pane.log) and cron prompts — owner-only, whatever umask

@@ -1016,7 +1016,7 @@ dbrain login
 ```bash
 dbrain logs
 # или в реальном времени:
-journalctl --user -u dbrain-bot -f
+journalctl --user -u brain.service -f
 ```
 
 ---
@@ -1038,10 +1038,12 @@ Telegram → Deepgram → постоянная сессия Claude Code (tmux) �
 
 | Юнит | Что делает |
 |------|-----------|
-| `dbrain-bot.service` | Telegram-бот + постоянная сессия мозга |
-| `dbrain-watchdog.service` | Сторож: следит за здоровьем и чинит |
-| `dbrain-process.timer` | Ежедневная обработка записей в 21:00 |
-| `dbrain-doctor.timer` | Ежедневная самопроверка в 08:00 |
+| `brain.service` | Telegram-бот, постоянная сессия мозга, планировщик и сторож — один процесс |
+| `brain-daily.timer` | Ежедневная обработка записей в 21:00 |
+
+Сторож (следит за здоровьем сессии и чинит её) и планировщик живут внутри
+`brain.service` как задачи — отдельных юнитов для них больше нет.
+Самопроверка запускается вручную: `dbrain doctor`.
 
 Чтобы сервисы работали без вашего входа на сервер и стартовали при перезагрузке, скрипт установки включает linger (`loginctl enable-linger`).
 
@@ -1053,15 +1055,15 @@ dbrain status
 systemctl --user status 'dbrain-*'
 
 # Логи бота
-journalctl --user -u dbrain-bot -f          # в реальном времени
-journalctl --user -u dbrain-bot -n 100      # последние 100 строк
+journalctl --user -u brain.service -f          # в реальном времени
+journalctl --user -u brain.service -n 100      # последние 100 строк
 
 # Перезапустить бота (сессия мозга выживает — KillMode=process)
-systemctl --user restart dbrain-bot
+systemctl --user restart brain.service
 
 # Остановить / запустить
-systemctl --user stop dbrain-bot
-systemctl --user start dbrain-bot
+systemctl --user stop brain.service
+systemctl --user start brain.service
 
 # Таймеры
 systemctl --user list-timers

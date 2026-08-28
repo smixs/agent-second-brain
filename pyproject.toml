@@ -1,10 +1,10 @@
 [project]
 name = "agent-second-brain"
-version = "3.0.3"
-description = "Voice-first personal assistant for Telegram with an Obsidian second brain"
+version = "3.1.0"
+description = "Второй мозг: Telegram + Claude + Obsidian — обследование зданий и TRONIX"
 readme = "README.md"
 authors = [
-    { name = "smixs", email = "mixshima@gmail.com" }
+    { name = "Alexandr Sergiyenko", email = "serg.au25@gmail.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [

@@ -58,6 +58,7 @@ class CronRunner:
         job_timeout: float = 600.0,
         max_consecutive_errors: int = 3,
         retry_seconds: float = 300.0,
+        clear_after_run: bool = True,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self.store = store
@@ -68,6 +69,7 @@ class CronRunner:
         self.job_timeout = job_timeout
         self.max_consecutive_errors = max_consecutive_errors
         self.retry_seconds = retry_seconds
+        self.clear_after_run = clear_after_run
         self.clock = clock or (lambda: datetime.now(UTC))
         self._warned_dormant: set[str] = set()
 
@@ -135,8 +137,15 @@ class CronRunner:
         wrapped = wrap_job_prompt(
             job.id, job.prompt, scheduled_for=job.state.next_run
         )
+        # maint- request_id: when cron shares the main session (the default),
+        # this is what stops chat input from being steered into a scheduled
+        # turn — see ClaudeSession.is_steerable_turn.
         res = await asyncio.to_thread(
-            self.session.ask, wrapped, timeout=self.job_timeout
+            lambda: self.session.ask(
+                wrapped,
+                timeout=self.job_timeout,
+                request_id=f"maint-cron-{job.id}",
+            )
         )
         now = self.clock()
 
@@ -160,8 +169,12 @@ class CronRunner:
             # Jobs are stateless by contract; drop the turn's context so
             # the next job starts clean and the window never grows. Best
             # effort — a failed /clear must not block the state update.
-            with contextlib.suppress(Exception):
-                await asyncio.to_thread(self.session.send_control, "/clear")
+            # NEVER when the session is shared with the chat: wiping the
+            # user's context after every scheduled job is worse than a
+            # slightly longer window.
+            if self.clear_after_run:
+                with contextlib.suppress(Exception):
+                    await asyncio.to_thread(self.session.send_control, "/clear")
             if delivery_error is not None:
                 # The work happened but the user never saw it: keep the job
                 # (one-shots retry) and count the failure.
@@ -290,5 +303,6 @@ async def run_cron(settings: Any, bot: Any) -> None:
         job_timeout=settings.cron_job_timeout,
         max_consecutive_errors=settings.cron_max_consecutive_errors,
         retry_seconds=settings.cron_retry_seconds,
+        clear_after_run=settings.cron_isolated_session,
     )
     await runner.run(settings.cron_tick_seconds)

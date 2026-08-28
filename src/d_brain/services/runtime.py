@@ -53,7 +53,7 @@ def _build_session(
     # as a vanilla agent (no identity, no reply contract). Refuse loudly.
     if (
         not brain_prompt.exists()
-        or "# d-brain session contract" not in brain_prompt.read_text()
+        or "# second brain session contract" not in brain_prompt.read_text()
     ):
         raise RuntimeError(
             f"persona file missing or invalid: {brain_prompt} — "
@@ -82,12 +82,19 @@ def get_session(settings: Settings) -> ClaudeSession:
 
 
 def get_cron_session(settings: Settings) -> ClaudeSession:
-    """Return the cron brain — a second, isolated ClaudeSession.
+    """Return the session scheduled jobs run in.
 
-    Same persona and vault as the main brain, but its own tmux session and
-    its own runtime dir (pane.lock / pane.log / ready), so scheduled jobs
-    never block or pollute the user's conversation.
+    By default this IS the main brain: a second always-on Claude Code process
+    doubles the memory footprint of the whole install for a ticker that fires
+    a handful of times a day. Jobs run as maint- turns, which the chat handler
+    already recognises (is_steerable_turn) and reports as "background work"
+    instead of steering user text into them.
+
+    Set CRON_ISOLATED_SESSION=true to get the old second brain — its own tmux
+    session and runtime dir, so a long job never occupies the chat.
     """
+    if not settings.cron_isolated_session:
+        return get_session(settings)
     global _cron_session
     if _cron_session is None:
         _cron_session = _build_session(

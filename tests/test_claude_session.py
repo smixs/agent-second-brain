@@ -7,11 +7,16 @@ and stall detection are deterministic and fast.
 """
 
 import subprocess
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
 
 from d_brain.services.claude_session import AskResult, ClaudeSession
+
+# Wall-clock "now" for rate-limit bookkeeping. RATE below says the limit
+# resets at 15:00, so 12:00 is inside the window and 15:01 is past it.
+WALL = datetime(2026, 6, 10, 12, 0)
 
 READY = (
     "────────────────────\n❯\n────────────────────\n"
@@ -86,6 +91,8 @@ def make_session(
     clock: dict,
     *,
     rid: str = "rid00001",
+    now: datetime = WALL,
+    lock_timeout: float = 5.0,
 ) -> ClaudeSession:
     def sleep_fn(seconds: float) -> None:
         clock["now"] += seconds
@@ -101,6 +108,10 @@ def make_session(
         poll_interval=1.0,
         startup_timeout=30.0,
         stall_timeout=10.0,
+        lock_timeout=lock_timeout,
+        # Wall clock for the rate-limit record, separate from the monotonic
+        # clock that drives polling.
+        now_fn=lambda: now,
     )
 
 
@@ -242,6 +253,117 @@ def test_ask_detects_rate_limit_without_hanging(tmp_path, clock):
     res = s.ask("ping", timeout=60)
     assert res.status == "rate_limited"
     assert not res.ok
+
+
+# ── sticky rate limit (the regression this design exists for) ───────────
+
+
+def test_rate_limit_is_recorded_with_its_reset_time(tmp_path, clock):
+    fake = FakeTmux([RATE], exists=True)
+    s = make_session(tmp_path, fake, clock)
+    s.ask("ping", timeout=60)
+    rec, holding = s.rate_limit_status()
+    assert holding
+    assert rec.until == datetime(2026, 6, 10, 15, 0)  # "resets at 3:00 PM"
+
+
+def test_ask_inside_the_window_answers_without_touching_tmux(tmp_path, clock):
+    """Cheap gate: a known-live limit costs zero tmux round-trips."""
+    fake = FakeTmux([RATE], exists=True)
+    s = make_session(tmp_path, fake, clock)
+    s.ask("ping", timeout=60)
+    before = len(fake.calls)
+    res = s.ask("ping again", timeout=60)
+    assert res.status == "rate_limited"
+    assert len(fake.calls) == before  # no capture-pane, no send-keys
+
+
+def test_expired_window_probes_instead_of_short_circuiting(tmp_path, clock):
+    """THE bug. The banner is still on screen after the limit reset. The old
+    code read the pane, saw 'usage limit', returned early and never typed —
+    so the banner could never scroll away and the status stuck forever.
+
+    Past the recorded reset time ask() must wipe the pane and send a REAL
+    prompt; the answer is the only trustworthy proof the limit is over.
+    """
+    fake = FakeTmux([RATE], exists=True)
+    s = make_session(tmp_path, fake, clock)
+    assert s.ask("ping", timeout=60).status == "rate_limited"
+
+    # Same pane, same stale banner, but the reset moment has passed.
+    later = make_session(
+        tmp_path, FakeTmux([RATE, _complete("rid00001")], exists=True), clock,
+        now=datetime(2026, 6, 10, 15, 1),
+    )
+    res = later.ask("ping", timeout=60)
+    assert res.ok
+    assert res.reply == "PONG"
+    assert later.rate_limit_status() == (None, False)  # success clears it
+
+
+def test_probe_survives_a_repainting_pane(tmp_path, clock):
+    """Right after the wipe the TUI may still show fragments of the banner;
+    those must not immediately re-arm the limit."""
+    fake = FakeTmux([RATE], exists=True)
+    make_session(tmp_path, fake, clock).ask("ping", timeout=60)
+
+    later = make_session(
+        tmp_path,
+        FakeTmux([RATE, RATE, _complete("rid00001")], exists=True),
+        clock,
+        now=datetime(2026, 6, 10, 15, 1),
+    )
+    assert later.ask("ping", timeout=60).ok
+
+
+def test_successful_turn_clears_a_recorded_limit(tmp_path, clock):
+    fake = FakeTmux([RATE], exists=True)
+    s = make_session(tmp_path, fake, clock)
+    s.ask("ping", timeout=60)
+    assert s.rate_limit_status()[1]
+
+    ok = make_session(
+        tmp_path, FakeTmux([_complete("rid00001")], exists=True), clock,
+        now=WALL + timedelta(hours=4),
+    )
+    assert ok.ask("ping", timeout=60).ok
+    assert ok.rate_limit_status() == (None, False)
+
+
+# ── recovery paths ──────────────────────────────────────────────────────
+
+
+def test_hard_reset_recreates_and_forgets_the_limit(tmp_path, clock):
+    fake = FakeTmux([RATE], exists=True)
+    s = make_session(tmp_path, fake, clock)
+    s.ask("ping", timeout=60)
+    assert s.rate_limit_status()[1]
+
+    s2 = make_session(tmp_path, FakeTmux([READY], exists=True), clock)
+    assert s2.hard_reset() is True
+    assert s2.rate_limit_status() == (None, False)
+    assert not (tmp_path / ".dbrain" / "inflight").exists()
+
+
+def test_send_control_gives_up_instead_of_waiting_out_a_turn(tmp_path, clock):
+    """A blocking flock on the event loop is what froze the whole bot for up
+    to 20 minutes when /new arrived mid-turn. Bounded now."""
+    import fcntl
+    import os
+
+    fake = FakeTmux([READY], exists=True)
+    s = make_session(tmp_path, fake, clock, lock_timeout=3.0)
+    lock = tmp_path / ".dbrain" / "pane.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(lock, os.O_CREAT | os.O_RDWR, 0o644)
+    fcntl.flock(fd, fcntl.LOCK_EX)
+    try:
+        started = clock["now"]
+        assert s.send_control("/clear") is False
+        assert clock["now"] - started <= 4.0  # gave up, did not wait it out
+    finally:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
 
 
 def test_ask_detects_logged_out(tmp_path, clock):

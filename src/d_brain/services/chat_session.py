@@ -19,7 +19,10 @@ from d_brain.services.runtime import get_ask_lock, get_session
 logger = logging.getLogger(__name__)
 
 _STATUS_MESSAGES = {
-    "rate_limited": "⏳ Лимит подписки исчерпан. Вернусь, когда он обновится.",
+    "rate_limited": (
+        "⏳ Лимит подписки исчерпан. Проверю сам, когда он обновится. "
+        "Принудительно: /reset"
+    ),
     "logged_out": "🔑 Нужен повторный вход. Админу: dbrain login.",
     "timeout": "⌛ Превышено время ожидания ответа. Попробуй ещё раз.",
     "error": "❌ Ошибка сессии. Попробуй позже.",
@@ -70,13 +73,40 @@ class ChatSessionManager:
     async def interrupt(self) -> None:
         await asyncio.to_thread(self._session.interrupt)
 
-    def reset(self, user_id: int) -> None:
-        """Clear the live session context (durable data in files is kept)."""
-        self._session.clear()
-        logger.info("session cleared (reset) requested by user %d", user_id)
+    async def reset(self, user_id: int) -> str:
+        """Clear the live session context (durable data in files is kept).
+
+        Async and off-thread ON PURPOSE: the old sync version ran a blocking
+        flock straight on the event loop, so `/new` during a long turn froze
+        the entire bot for up to 20 minutes. Now a busy pane just reports
+        back and the user can escalate to hard_reset().
+        """
+        ok = await asyncio.to_thread(self._session.clear)
+        logger.info("session clear requested by user %d (ok=%s)", user_id, ok)
+        if ok:
+            return "🧹 Контекст сессии очищен. Файлы vault не тронуты."
+        return (
+            "⚠️ Сессия занята — контекст не очищен. "
+            "Жёсткий сброс: /reset"
+        )
+
+    async def hard_reset(self, user_id: int) -> str:
+        """Recreate the session no matter what — the /reset escape hatch.
+
+        Never waits on the pane lock, so it works precisely when the session
+        is wedged, a turn is stuck, or a stale rate-limit record is blocking
+        every request.
+        """
+        clean = await asyncio.to_thread(self._session.hard_reset)
+        logger.warning("hard reset requested by user %d (clean=%s)", user_id, clean)
+        if clean:
+            return "♻️ Сессия пересоздана. Контекст чистый, лимиты сброшены."
+        return (
+            "♻️ Сессия пересоздана, зависший запрос прерван. "
+            "Контекст чистый, лимиты сброшены."
+        )
 
     async def compact(self, user_id: int) -> str:
         """Durable-state-first: clearing is the compaction; memory lives in
         files, so there is nothing to summarize into the session."""
-        self._session.clear()
-        return "🧹 Сессия очищена (важные данные сохранены в файлах)."
+        return await self.reset(user_id)

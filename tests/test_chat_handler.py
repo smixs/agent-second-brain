@@ -62,7 +62,6 @@ def test_classify_command_skill_is_normal_turn():
 def test_classify_command_control_is_fire_and_forget():
     from d_brain.bot.handlers.chat import classify_command
 
-    assert classify_command("/clear") == "control"
     assert classify_command("/model sonnet") == "control"
 
 
@@ -89,9 +88,9 @@ def test_control_command_dispatches_fire_and_forget(monkeypatch):
     monkeypatch.setattr(chat, "_get_manager", lambda: mgr)
     bot = FakeBot()
 
-    asyncio.run(chat._dispatch_text(bot, chat_id=10, user_id=1, text="/clear"))
+    asyncio.run(chat._dispatch_text(bot, chat_id=10, user_id=1, text="/model sonnet"))
 
-    assert mgr.controls == ["/clear"]
+    assert mgr.controls == ["/model sonnet"]
     assert mgr.sent == []  # no marker turn started
     assert bot.messages  # got an acknowledgement
 
@@ -285,12 +284,15 @@ def test_extract_media_sanitizes_hostile_extension():
     assert "/" not in ext and "\\" not in ext
 
 
-def test_compact_not_a_control_command():
-    """commands.router intercepts /compact earlier — keeping it in _CONTROL
-    is dead code that lies about behavior."""
+def test_reset_commands_are_not_control_commands():
+    """commands.router intercepts /new, /clear, /compact and /reset earlier.
+    Leaving them in _CONTROL fired them blindly into the pane and answered
+    "sent" even when the pane was wedged — the opposite of what a user
+    typing /clear at a stuck bot needs."""
     from d_brain.bot.handlers.chat import classify_command
 
-    assert classify_command("/compact") == "turn"
+    for cmd in ("/compact", "/clear", "/new", "/reset"):
+        assert classify_command(cmd) == "turn", cmd
 
 
 def test_album_items_flush_as_single_prompt(monkeypatch):

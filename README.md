@@ -228,11 +228,16 @@ Set `TZ` to your own IANA timezone (e.g. `TZ=Europe/Moscow`) — it defaults to 
 - It does **not** require any API keys beyond Telegram + Deepgram. No OpenAI, no token meter.
 - It does **not** lock you in. Delete everything tomorrow; your vault still opens in Obsidian.
 
-## Built by
+## This fork
 
-[Serge Shima](https://shima.me) — 20 years in marketing (BBDO, Publicis), now running an AI creative agency in Central Asia and teaching businesses to work with AI at [aimasters.me](https://aimasters.me).
+Maintained by Alexandr Sergiyenko — building-inspection expert (structural
+surveys, NDT, technical reports) and co-founder/CVO of TRONIX, a 3D-printing
+studio. This fork adapts the assistant to those two domains, fixes the sticky
+rate-limit state and the event-loop freezes, and collapses the deployment to
+a single always-on systemd unit.
 
-This system runs my actual life: 1,100+ vault cards, daily reports, an agent I argue with about my own calendar. It started as a weekend project and became infrastructure.
+Upstream: [smixs/agent-second-brain](https://github.com/smixs/agent-second-brain)
+by [Serge Shima](https://shima.me).
 
 ## License
 

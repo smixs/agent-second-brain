@@ -35,8 +35,10 @@ MAX_RESPONSE_LENGTH = 4096
 # - control: client-side Claude Code commands — no model turn, fire-and-forget
 # - tui: interactive full-screen UIs — undrivable through a typed pane
 # - everything else (incl. /skill-name) is a normal model turn → marker path
-# /compact is NOT here: commands.router (registered earlier) intercepts it.
-_CONTROL = {"/clear", "/model"}
+# /new, /clear, /compact and /reset are NOT here: commands.router (registered
+# earlier) intercepts them and answers with the outcome instead of firing
+# blindly into the pane.
+_CONTROL = {"/model"}
 _TUI_ONLY = {"/agents", "/config", "/login"}
 
 _manager: ChatSessionManager | None = None
@@ -153,10 +155,17 @@ async def _process_and_reply(bot: Bot, chat_id: int, user_id: int, prompt: str) 
 
 
 async def _typing_loop(bot: Bot, chat_id: int) -> None:
-    """Send typing action every 4 seconds while processing."""
+    """Send typing action every 4 seconds while processing.
+
+    A failed send_chat_action (flood limit, transient API error) must not
+    kill the task with an unretrieved exception — the indicator is cosmetic.
+    """
     try:
         while True:
-            await bot.send_chat_action(chat_id, "typing")
+            try:
+                await bot.send_chat_action(chat_id, "typing")
+            except Exception as exc:  # noqa: BLE001 — cosmetic, never fatal
+                logger.debug("typing indicator failed: %s", exc)
             await asyncio.sleep(4)
     except asyncio.CancelledError:
         pass

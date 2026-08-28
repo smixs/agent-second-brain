@@ -1,12 +1,13 @@
 """Liveness watchdog for the persistent Claude session.
 
-Runs as its own systemd --user service in a SEPARATE slice from the session
-(so an OOM kill of the brain doesn't take the watchdog with it). Each tick it
-decides one of:
+Runs as a supervised asyncio task INSIDE the bot process (run_watchdog); the
+standalone main() is kept for a separate unit if that is ever wanted again.
+Each tick it decides one of:
 
 - disk_full        → alert + STOP (a restart can't fix a full disk)
 - recovered_dead   → session gone → force_recover + alert
-- rate_limited     → subscription limit hit → do NOT kill; wait it out
+- rate_limited     → limit hit AND the recorded window still holds → wait
+- recovered_limit  → the window lapsed but the banner is still up → recover
 - logged_out       → auth lost → alert (needs re-login); do NOT kill
 - recovered_hung   → wedged → force_recover + alert
 - recover_deferred → wedged but a live request holds the lock → retry next tick
@@ -23,6 +24,8 @@ Alerts are debounced: a level-triggered fault (disk/logged-out) alerts once
 per cooldown, and re-fires after the session returns to a good state.
 """
 
+import asyncio
+import contextlib
 import logging
 import shutil
 import time
@@ -150,9 +153,18 @@ class Watchdog:
 
         state = self.session.current_state()
         if state == PaneState.RATE_LIMITED:
-            self._note_good()
-            self._write_status("rate_limited")
-            return "rate_limited"
+            # A limit banner is only worth waiting out while the recorded
+            # window still holds. Past it the banner is just old text on
+            # screen — the state that used to stick forever, because this
+            # branch returned early and ask() refused to type over it.
+            if self.session.rate_limit_active():
+                self._note_good()
+                self._write_status("rate_limited")
+                return "rate_limited"
+            logger.info("rate-limit window lapsed with the banner still up")
+            return self._recover(
+                "limit", "✅ Лимит должен был обновиться — перезапустил сессию."
+            )
         if state == PaneState.LOGGED_OUT:
             self._maybe_alert(
                 "logged_out",
@@ -201,7 +213,48 @@ def _telegram_alerter(settings) -> Callable[[str], None]:  # pragma: no cover
     return send
 
 
+async def run_watchdog(settings, bot) -> None:  # pragma: no cover - loop
+    """The liveness loop as an asyncio task inside the bot process.
+
+    One process instead of two: the tick is a handful of tmux calls every
+    15s, and the ticks that can block (force_recover rebuilds a session)
+    run in a worker thread so the event loop stays free. systemd's own
+    WatchdogSec covers the case this loop cannot — the bot itself freezing.
+    """
+    from d_brain.services.runtime import get_session
+
+    tick = settings.watchdog_tick_seconds
+    pending: list[str] = []
+
+    def alert(msg: str) -> None:
+        pending.append(msg)  # queued: the loop delivers it on the event loop
+
+    watchdog = Watchdog(
+        get_session(settings),
+        runtime_dir=settings.runtime_dir,
+        alert_fn=alert,
+        tick=tick,
+    )
+    logger.info("session watchdog started (tick %.0fs)", tick)
+    while True:
+        try:
+            decision = await asyncio.to_thread(watchdog.check_once)
+            if decision != "healthy":
+                logger.info("watchdog: %s", decision)
+        except Exception:
+            logger.exception("watchdog tick failed")
+        while pending:
+            msg = pending.pop(0)  # pop first: an undeliverable alert must
+            if settings.admin_chat_id is None:
+                continue  # not queue forever and leak on a chat-less install
+            with contextlib.suppress(Exception):
+                await bot.send_message(settings.admin_chat_id, msg)
+        await asyncio.sleep(tick)
+
+
 def main() -> None:  # pragma: no cover
+    """Standalone entry point — kept for `python -m d_brain.services.watchdog`
+    and for running the watchdog in its own unit if ever wanted again."""
     logging.basicConfig(level=logging.INFO)
     from d_brain.config import get_settings
     from d_brain.services.runtime import get_session
@@ -212,6 +265,7 @@ def main() -> None:  # pragma: no cover
         session,
         runtime_dir=settings.runtime_dir,
         alert_fn=_telegram_alerter(settings),
+        tick=settings.watchdog_tick_seconds,
     ).run()
 
 

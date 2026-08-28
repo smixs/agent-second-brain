@@ -1,10 +1,12 @@
 [Unit]
-Description=d-brain daily processing
-OnFailure=dbrain-notify@%n.service
+Description=Second brain — nightly processing of the day's notes
 
 [Service]
 Type=oneshot
 WorkingDirectory=%h/projects/dbrain
 ExecStart=%h/projects/dbrain/scripts/process.sh
+# One run must never wedge the timer: the pipeline's own ask() is capped at
+# 20 min, so anything past 40 is a hang.
+TimeoutStartSec=2400
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=CLAUDE_CONFIG_DIR=%h/.claude

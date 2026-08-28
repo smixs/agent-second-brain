@@ -112,9 +112,23 @@ _BYPASS_TITLE_RE = re.compile(
     r"WARNING: Claude Code running in Bypass Permissions mode"
 )
 _BYPASS_MENU_RE = re.compile(r"(?m)^\s*(?:❯\s*)?2\.\s+Yes, I accept")
+# RATE LIMIT. The old pattern matched any of "usage limit|rate limit|limit
+# reached|resets at|5-hour limit|weekly limit" — which also matches Claude
+# Code's INFORMATIONAL footer ("Approaching usage limit · resets at 5pm",
+# "38% of the 5-hour limit used"), shown while the session works perfectly.
+# A blocking limit always states that it was REACHED/EXCEEDED, so anchor on
+# that verb and require the word "limit" near it.
 _RATE_RE = re.compile(
-    r"usage limit|rate limit|limit reached|resets at|5-hour limit|weekly limit",
+    r"\b(?:usage|weekly|session|5-hour|hourly|daily)?\s*limit\b[^.\n]{0,40}?"
+    r"\b(?:reached|exceeded|hit)\b"
+    r"|\b(?:reached|exceeded|hit)\b[^.\n]{0,40}?\b(?:usage|weekly|rate)?\s*limit\b"
+    r"|\bout of (?:your )?(?:usage|weekly|free) (?:limit|credits)\b",
     re.I,
+)
+# Guard against the informational footer: these words mean the limit is NEAR,
+# not spent. Checked on the same line as a _RATE_RE hit.
+_RATE_ADVISORY_RE = re.compile(
+    r"approach|nearing|% of|remaining|will (?:be )?reach|soon|almost", re.I
 )
 _LOGGED_OUT_RE = re.compile(
     r"invalid api key|please run /login|logged out|please log ?in|"
@@ -149,6 +163,24 @@ _IDLE_BARE_RE = re.compile(r"(?m)^\s*❯\s*$")
 
 def _chrome(text: str) -> str:
     return "\n".join(text.splitlines()[-_CHROME_LINES:])
+
+
+def rate_limit_banner(text: str) -> str | None:
+    """The line announcing a SPENT limit, or None for anything else.
+
+    Returned (with its successor line appended, since the reset time is often
+    wrapped onto the next line) so the caller can parse the reset moment out
+    of it — see services/rate_limit.parse_reset_time. Advisory lines about an
+    approaching limit are deliberately NOT matched: those appear while the
+    session is perfectly usable, and treating them as a limit is what made
+    the old detector fire on a healthy brain.
+    """
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if _RATE_RE.search(line) and not _RATE_ADVISORY_RE.search(line):
+            tail = lines[i + 1].strip() if i + 1 < len(lines) else ""
+            return f"{line.strip()} {tail}".strip()
+    return None
 
 
 _CHROME_LINE_RE = re.compile(
@@ -243,7 +275,7 @@ def classify_state(text: str) -> PaneState:
     ):
         return PaneState.BYPASS_PROMPT
     chrome = _chrome(text)
-    if _RATE_RE.search(chrome):
+    if rate_limit_banner(chrome):
         return PaneState.RATE_LIMITED
     if _LOGGED_OUT_RE.search(chrome):
         return PaneState.LOGGED_OUT

@@ -1,232 +1,131 @@
-# Agent Second Brain
+# Второй мозг — рабочие правила vault
 
-Voice-first personal assistant for capturing thoughts and managing tasks via Telegram.
+Личное хранилище Александра: обследование зданий (IPC) + TRONIX.
+Личность и стиль ассистента заданы в `deploy/brain-system.md` — здесь только
+устройство vault и правила работы с файлами.
 
-## EVERY SESSION BOOTSTRAP
+## БУТСТРАП КАЖДОЙ СЕССИИ
 
-**Before doing anything else, read these files in order:**
+Прочитать по порядку, до любых действий:
 
-1. `vault/MEMORY.md` — curated long-term memory (preferences, decisions, context)
-2. `vault/daily/YYYY-MM-DD.md` — today's entries
-3. `vault/daily/YYYY-MM-DD.md` — yesterday's entries (for continuity)
-4. `vault/goals/3-weekly.md` — this week's ONE Big Thing
-5. `vault/.session/handoff.md` — previous session context (if exists)
+1. `MEMORY.md` — долговременная память (профиль, решения, активный контекст)
+2. `.session/handoff.md` — чем закончилась прошлая сессия
+3. `daily/YYYY-MM-DD.md` — сегодня (и вчера, если сегодня пусто)
+4. `goals/3-weekly.md` — ONE Big Thing недели
 
-**Don't ask permission, just do it.** This ensures context continuity across sessions.
+Не спрашивать разрешения — просто прочитать.
 
----
+## КОНЕЦ ЗНАЧИМОЙ СЕССИИ
 
-## SESSION END PROTOCOL
-
-**Before ending a significant session, write to today's daily:**
+Дописать в сегодняшний `daily/`:
 
 ```markdown
 ## HH:MM [text]
-Session summary: [what was discussed/decided/created]
-- Key decision: [if any]
-- Created: [[link]] [if any files created]
-- Next action: [if any]
+Итог: что обсудили / решили / создали
+- Решение: если было
+- Создано: [[ссылка]]
+- Следующий шаг: если есть
 ```
 
-**Also update `vault/MEMORY.md` if:**
-- New key decision was made
-- User preference discovered
-- Important fact learned
-- Active context changed significantly
+Обновить `MEMORY.md` — только если появилось новое решение, предпочтение,
+факт или сменился активный контекст. Обновить `.session/handoff.md`:
+последняя сессия, решения, незавершённое, следующие шаги, наблюдения
+(`[friction]`, `[pattern]`, `[idea]`).
 
-**Update `vault/.session/handoff.md`:**
-- Last Session: what was done
-- Key Decisions: if any
-- In Progress: unfinished work
-- Next Steps: what to do next
-- Observations: friction signals, patterns, ideas (type: `[friction]`, `[pattern]`, `[idea]`)
+## Структура
 
----
+| Каталог | Что внутри |
+|---------|-----------|
+| `daily/` | Сырой поток дня (`YYYY-MM-DD.md`), пишется ботом |
+| `goals/` | Каскад целей: 3 года → год → месяц → неделя |
+| `thoughts/` | Обработанные заметки: `tasks/ projects/ ideas/ learnings/ reflections/` |
+| `MOC/` | Индексы (Maps of Content), строятся autograph |
+| `summaries/` | Дневные и недельные сводки |
+| `attachments/` | Файлы по датам: `attachments/YYYY-MM-DD/` |
+| `templates/` | Шаблоны карточек |
+| `business/` | Контрагенты и объекты обследования (вне git) |
+| `projects/` | Проекты TRONIX и лиды (вне git) |
 
-## Mission
+`business/` и `projects/` создаются по мере надобности; точка входа в
+каждом — `_index.md`.
 
-Help user stay aligned with goals, capture valuable insights, and maintain clarity.
+## Домены записи
 
-## Directory Structure
+| Домен | Признаки | Куда |
+|-------|----------|------|
+| Обследование (IPC) | объект, тендер, техзаключение, дефектная ведомость, надзор, эксперт, ГОСТ/СП | `thoughts/tasks/`, `business/` |
+| TRONIX | 3D-печать, Shop, DW, Точка Контакта, материалы, себестоимость, Рома, Гена | `thoughts/`, `projects/` |
+| Компания и команда | найм, процессы, финансы, юрлицо, бухгалтерия, Женя | `thoughts/projects/` |
+| Личное | здоровье, режим, бюджет, отдых | `thoughts/reflections/` |
 
-| Folder | Purpose |
-|--------|---------|
-| `daily/` | Raw daily entries (YYYY-MM-DD.md) |
-| `goals/` | Goal cascade (3y → yearly → monthly → weekly) |
-| `thoughts/` | Processed notes by category |
-| `MOC/` | Maps of Content indexes |
-| `attachments/` | Photos by date |
-| `business/` | Business data (CRM, network, events) |
-| `projects/` | Side projects (clients, leads) |
+Подробные правила классификации:
+`.claude/skills/dbrain-processor/references/classification.md`.
 
-## Business Context
-
-**Entry point:** `business/_index.md`
-
-```
-business/
-├── _index.md       ← Start here (stats, overview)
-├── crm/            ← Client records (companies + deals in one file)
-├── network/        ← Company structure, partners
-└── events/         ← Events, conferences
-```
-
-Search: `business/crm/{kebab-case}.md` (e.g. `acme-corp.md`, `client-b.md`)
-
-## Projects Context
-
-**Entry point:** `projects/_index.md`
-
-```
-projects/
-├── _index.md       ← Start here
-├── clients/        ← Project clients
-├── leads/          ← Leads
-└── projects/       ← Active projects
-```
-
-## Current Focus
-
-See [[goals/3-weekly]] for this week's ONE Big Thing.
-See [[goals/2-monthly]] for monthly priorities.
-
-## Goals Hierarchy
-
-```
-goals/0-vision-3y.md    → 3-year vision by life areas
-goals/1-yearly-YYYY.md  → Annual goals + quarterly breakdown
-goals/2-monthly.md      → Current month's top 3 priorities
-goals/3-weekly.md       → This week's focus + ONE Big Thing
-```
-
-## Entry Format
+## Формат записи в daily
 
 ```markdown
 ## HH:MM [type]
-Content
+Содержимое
 ```
 
-Types: `[voice]`, `[text]`, `[forward from: Name]`, `[photo]`
+Типы: `[voice]`, `[text]`, `[photo]`, `[document]`, `[forward]`.
 
-## Processing Workflow
+## Карточки (autograph)
 
-Run daily processing via `/process` command or automatically at 21:00.
-
-### 3-Phase Pipeline:
-1. **CAPTURE** — Read daily entries → classify → JSON
-2. **EXECUTE** — Save thoughts, update CRM → JSON
-3. **REFLECT** — Generate HTML report, update MEMORY, record observations
-
-Each phase = fresh Claude context for better quality.
-
-## Card Template (autograph)
-
-**Skill:** `.claude/skills/autograph/SKILL.md`
-
-All new vault cards follow the autograph template:
+Скилл: `.claude/skills/autograph/SKILL.md`. Любая новая карточка:
 
 ```yaml
 ---
-type: crm|lead|contact|project|personal|note
+type: task|project|idea|note|crm|contact|object
 description: >-
-  One line — what a searcher will see in results
-tags: [tag1, tag2]        # 2-5 tags, lowercase
+  Одна строка — то, что человек увидит в результатах поиска
+tags: [tag1, tag2]        # 2–5 штук, lowercase
 status: active|draft|pending|done|inactive
-industry: FMCG            # for CRM/leads
-region: US                 # ISO codes
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-# Auto fields (don't edit manually):
+# Автополя, руками не трогать:
 last_accessed: YYYY-MM-DD
 relevance: 0.85
 tier: active
 ---
 ```
 
-**Rules:**
-- `description` — REQUIRED. Write as a search snippet, NOT "contact" or "crm"
-- `tags` — REQUIRED. 2-5 tags, lowercase, hyphen-separated
-- `status` ≠ `tier`: status = business status, tier = memory (automatic)
-- One fact = one place (DRY). References via [[wikilinks]]
-- Decay engine: `uv run .claude/skills/autograph/scripts/engine.py decay .`
+Правила:
+- `description` обязателен и написан как поисковый сниппет, а не «заметка».
+- `tags` обязательны, 2–5, через дефис.
+- `status` ≠ `tier`: status — состояние дела, tier — память (автомат).
+- Один факт живёт в одном месте. Всё остальное — `[[wikilinks]]`.
+- Забывание: `uv run .claude/skills/autograph/scripts/engine.py decay .`
+- Здоровье графа: `uv run .claude/skills/autograph/scripts/graph.py health .`
 
-## Skills & References
+## Ежедневная обработка
 
-| Skill | Purpose |
-|-------|---------|
-| `dbrain-processor` | Main daily processing (3-phase pipeline) |
-| `autograph` | Typed vault engine: schema enforcement, graph health, decay, MOC, dedup |
+`/process` в Telegram или таймер в 21:00. Скилл:
+`.claude/skills/dbrain-processor/SKILL.md`. Три фазы — CAPTURE (разобрать
+записи дня), EXECUTE (создать карточки и связи), REFLECT (сводка + MEMORY).
 
-- **Processing:** `.claude/skills/dbrain-processor/SKILL.md`
-- **Autograph:** `.claude/skills/autograph/SKILL.md`
-- **Rules:** `.claude/rules/` (daily, thoughts, goals, obsidian-markdown, weekly-reflection)
-- **Docs:** `.claude/docs/`
+## Отчёты в Telegram
 
-## Vault Graph (autograph)
+Только HTML: `<b>`, `<i>`, `<code>`, `<s>`, `<u>`, `<a>`. Никакого Markdown
+и никаких таблиц с `|` — Telegram их не рендерит. До 4096 символов.
 
-**Purpose:** Analysis and maintenance of vault link structure.
+## Правила по типам файлов
 
-**Usage:**
-```bash
-# Analyze vault
-uv run vault/.claude/skills/autograph/scripts/graph.py health vault
+`.claude/rules/`: `daily-format.md`, `thoughts-format.md`, `goals-format.md`,
+`telegram-report.md`, `obsidian-markdown.md`, `weekly-reflection.md`.
 
-# Result
-vault/.graph/vault-graph.json  # JSON graph with stats
-vault/.graph/report.md         # Human-readable report
-```
+## Агенты
 
-**Domains:**
-| Domain | Path | Hub |
-|--------|------|-----|
-| Personal | thoughts/, goals/, daily/ | MEMORY.md |
-| Business | business/crm/, business/network/ | business/_index.md |
-| Projects | projects/clients/, projects/leads/ | projects/_index.md |
+| Агент | Задача |
+|-------|--------|
+| `note-organizer` | Навести порядок в vault, починить ссылки |
+| `inbox-processor` | Разбор инбокса по GTD |
 
-## Available Agents
+## Правила, выведенные на практике
 
-| Agent | Purpose |
-|-------|---------|
-| `note-organizer` | Organize vault, fix links |
-| `inbox-processor` | GTD-style inbox processing |
-
-## Path-Specific Rules
-
-See `.claude/rules/` for format requirements:
-- `daily-format.md` — daily files format
-- `thoughts-format.md` — thought notes format
-- `goals-format.md` — goals format
-- `telegram-report.md` — HTML report format
-- `obsidian-markdown.md` — Obsidian syntax rules
-- `weekly-reflection.md` — weekly reflection template
-
-## Report Format
-
-Reports use Telegram HTML:
-- `<b>bold</b>` for headers
-- `<i>italic</i>` for metadata
-- Only allowed tags: b, i, code, pre, a
-
-## Quick Commands
-
-| Command | Action |
-|---------|--------|
-| `/process` | Run daily processing |
-| `/organize` | Organize vault |
-| `/graph` | Analyze vault links |
-
-## Customization
-
-For personal overrides: create `CLAUDE.local.md`
-
-## Learnings (from experience)
-
-1. **Don't rewrite working code** without reason (KISS, DRY, YAGNI)
-2. **Don't add checks** that weren't there — let the agent decide
-3. **Don't propose solutions** without studying git log/diff first
-4. **Don't break architecture** (process.sh → Claude → skill is correct)
-5. **Problems are usually simple** (e.g., sed one-liner for HTML fix)
-
----
-
-*System Version: 3.0*
+1. Не переписывать работающий код без причины (KISS, DRY, YAGNI).
+2. Не добавлять проверок, которых не просили.
+3. Не предлагать решение, не посмотрев git log / diff.
+4. Номера и редакции нормативов не цитировать по памяти — помечать
+   `[сверить редакцию]`.
+5. Проблемы обычно проще, чем кажутся.

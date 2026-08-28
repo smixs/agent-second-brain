@@ -1,75 +1,84 @@
 # Long-term Memory
 
-Curated knowledge that persists across sessions. Part of the 3-layer memory architecture (hot context → searchable vault → archive). See `.claude/skills/autograph/SKILL.md` for details.
+Курируемое знание, которое переживает сессии. Часть трёхслойной памяти
+(горячий контекст → vault с поиском → архив). Движок и правила карточек —
+`.claude/skills/autograph/SKILL.md`.
 
-## User Profile
+Здесь только то, что НЕ выводится из кода, git-истории или файлов vault.
+Одна строка = один факт. Устаревшее удалять, а не копить.
 
-| Field | Value |
-|-------|-------|
-| Name | [Your name] |
-| Timezone | [Your timezone, e.g., UTC+5] |
-| Location | [City/Country] |
-| Primary language | [e.g., Russian/English] |
+## Профиль
 
-## Preferences
+| Поле | Значение |
+|------|----------|
+| Имя | Александр Сергиенко |
+| Часовой пояс | Asia/Almaty (UTC+5) |
+| Локация | Карагандинская область, Казахстан |
+| Рабочие часы | 10:00–19:00 |
+| Язык общения | Русский |
 
-### Tech Stack
-- Languages: [e.g., Python, TypeScript]
-- Frameworks: [e.g., React, FastAPI]
-- Tools: [e.g., Cursor, Claude Code]
+## Роли
 
-### Communication Style
-- Preferred response language: [Russian/English/Mixed]
-- Detail level: [Brief/Detailed]
-- Code comments: [Minimal/Verbose]
+**1. Директор ТОО «Industrial Project Company» (IPC)** — техническое
+обследование зданий и сооружений. Аттестованный эксперт. Полный цикл:
+тендер → договор → программа обследования → полевые работы → техническое
+заключение → акт. Субподряд (дефектоскопия, геодезия, лаборатория)
+привлекается под конкретный объект.
 
-### Habits
-- Morning routine: [if relevant]
-- Work hours: [e.g., 10:00-19:00]
-- Planning cadence: [weekly/daily]
+**2. Сооснователь и CVO TRONIX** — студия 3D-печати и продуктовая
+экосистема. Направления: TRONIX Shop (текущий фокус), TRONIX DW,
+Точка Контакта.
 
-## Key Decisions
+## Стиль работы со мной
 
-| Date | Decision | Context |
-|------|----------|---------|
-| YYYY-MM-DD | Example: Use uv instead of pip | Better dependency management |
+- Инженерный тон: сразу суть, списки и конкретика, без воды и смайлов.
+- Не соглашаться из вежливости — дырку в плане называть прямо.
+- Номера и редакции нормативов не цитировать по памяти, помечать
+  `[сверить редакцию]`.
+- Сохранять входящее сразу, в том же ходе, и говорить куда сохранил.
 
-## Active Context
+## Ключевые решения
 
-### ONE Big Thing (This Week)
-<!-- From goals/3-weekly.md -->
-- [ ] [Current week's main focus]
+| Дата | Решение | Контекст |
+|------|---------|----------|
+| 2026-08-29 | Второй мозг адаптирован под две роли: обследование + TRONIX | Вычищен апстримовый контекст рекламного агентства |
 
-### Hot Projects
-1. [Project name] — [status/next action]
+## Активный контекст
 
-### Pipeline/Leads
-<!-- If applicable -->
-- [Lead name] — [status]
+### ONE Big Thing (эта неделя)
+<!-- синхронизируется с goals/3-weekly.md -->
+- [ ] Список компаний-целей с Женей + рассылка предложений о сотрудничестве
 
-## Key People
+### Горячие проекты
+1. TRONIX Shop — запуск сайта и первые продажи
+2. IPC — выход на постоянный поток объёмов через партнёрство
 
-| Name | Role | Contact | Notes |
-|------|------|---------|-------|
-| [Name] | [Role] | [Telegram/Email] | [Context] |
+## Люди
 
-## Learnings
+| Имя | Роль | Контекст |
+|------|------|----------|
+| Женя (брат) | Старший партнёр по инженерным заказам | Находит людей и ресурсы под объекты |
+| Рома | Со-фаундер TOO Tronix (45%) | |
+| Гена | Со-фаундер TOO Tronix (45%) | |
 
-### What Worked
-- [Pattern/approach that was successful]
+## Выводы
 
-### What Didn't Work
-- [Anti-pattern to avoid]
+### Что работает
+- —
 
-### Rules to Remember
-- [Important rule discovered during work]
+### Что не работает
+- —
 
-## Quick Links
+### Правила, которые я вывел
+- —
 
-- [[goals/3-weekly]] — Weekly focus
-- [[goals/2-monthly]] — Monthly priorities
-- [[MOC/index]] — Maps of Content
+## Быстрые ссылки
+
+- [[goals/3-weekly]] — фокус недели
+- [[goals/2-monthly]] — приоритеты месяца
+- [[goals/1-yearly-2026]] — год
+- [[goals/0-vision-3y]] — 3 года
 
 ---
 
-*Last updated: YYYY-MM-DD*
+*Обновлено: 2026-08-29*

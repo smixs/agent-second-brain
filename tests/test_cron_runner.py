@@ -18,11 +18,13 @@ class FakeSession:
         self.results = list(results or [])
         self.on_ask = on_ask
         self.asked: list[str] = []
+        self.request_ids: list = []
         self.controls: list[str] = []
         self.recovered = 0
 
-    def ask(self, prompt, *, timeout=0.0, wrap=True):
+    def ask(self, prompt, *, timeout=0.0, wrap=True, request_id=None):
         self.asked.append(prompt)
+        self.request_ids.append(request_id)
         if self.on_ask:
             self.on_ask()
         return self.results.pop(0) if self.results else AskResult("ok", reply="done")
@@ -165,6 +167,27 @@ async def test_clear_sent_after_successful_run(tmp_path):
     session = FakeSession([AskResult("ok", reply="x")])
     await _runner(store, session).tick()
     assert "/clear" in session.controls
+
+
+async def test_shared_session_is_never_cleared_after_a_job(tmp_path):
+    """With CRON_ISOLATED_SESSION=false the ticker runs in the SAME session
+    as the chat. Wiping the context after every scheduled job would delete
+    the conversation the user is in the middle of."""
+    store = _store(tmp_path)
+    _add_job(store, "j1")
+    session = FakeSession([AskResult("ok", reply="x")])
+    await _runner(store, session, clear_after_run=False).tick()
+    assert session.controls == []
+
+
+async def test_job_turns_are_tagged_as_maintenance(tmp_path):
+    """The maint- prefix is what stops chat text from being steered into a
+    scheduled turn when both share one session."""
+    store = _store(tmp_path)
+    _add_job(store, "j1")
+    session = FakeSession([AskResult("ok", reply="x")])
+    await _runner(store, session).tick()
+    assert session.request_ids == ["maint-cron-j1"]
 
 
 # ── one-shot lifecycle ───────────────────────────────────────────────

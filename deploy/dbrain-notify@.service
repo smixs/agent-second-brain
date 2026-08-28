@@ -1,9 +1,0 @@
-[Unit]
-Description=d-brain failure alert for %i
-
-[Service]
-Type=oneshot
-WorkingDirectory=%h/projects/dbrain
-# Independent of the bot/watchdog: only needs curl + the token from .env, so
-# it still fires when those services are crash-looping.
-ExecStart=%h/projects/dbrain/scripts/notify.sh "⚠️ d-brain: сбой юнита %i"

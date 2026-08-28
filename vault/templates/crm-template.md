@@ -1,37 +1,51 @@
 ---
 type: crm
 description: >-
-  [One-line summary: industry, key deal, what makes this client notable]
-tags: [industry, region, deal-type]
+  Одна строка: кто это, какой объект/тендер, чем важен
+tags: [обследование, регион, тип-работ]
 status: prospect
-industry: [FMCG|Electronics|Banks|Pharma|Retail|Auto|IT|Telecom]
-region: [ISO country code]
-owner: [Your Name]
+industry: [строительство|промышленность|госсектор|ЖКХ|энергетика|ритейл]
+region: KZ-Karaganda
+owner: Александр Сергиенко
 priority: [High|Mid|Low]
-deal_status: [In Progress|Tender|Proposal Sent]
+deal_status: [Тендер|КП отправлено|Договор|В работе|Закрыт]
 deal_deadline: YYYY-MM-DD
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 ---
 
-# [Company Name]
+# [Контрагент]
 
-## Overview
-- **Industry:** [industry]
-- **Region:** [countries]
-- **Contact:** [key contact person]
+## Общее
+- **Сфера:** [отрасль]
+- **Регион:** [область / город]
+- **Контакт:** [ФИО, должность, телефон/почта]
+- **Как вышли:** [тендер / рекомендация / входящий]
 
-## Active Deals
+## Объекты и работы
 
-### [Deal Name]
-- **Status:** [deal_status]
-- **Value:** $[amount]
-- **Deadline:** [date]
-- **Details:** [what the deal involves]
+### [Объект]
+- **Адрес:** [адрес]
+- **Тип:** [здание / сооружение, назначение, этажность, год постройки]
+- **Вид обследования:** [визуальное / детальное инструментальное]
+- **Состав работ:** [НК, вскрытия, поверочные расчёты, геодезия]
+- **Субподряд:** [кто и на что]
+- **Сумма:** [сумма, валюта]
+- **Сроки:** [полевой этап / камеральный / сдача]
+- **Статус:** [deal_status]
 
-## History
-- YYYY-MM-DD: [First contact / how we met]
-- YYYY-MM-DD: [Key milestone]
+## Документы
+- [ ] ТЗ
+- [ ] КП / смета
+- [ ] Договор
+- [ ] Программа обследования
+- [ ] Дефектная ведомость
+- [ ] Техническое заключение
+- [ ] Акт выполненных работ
 
-## Notes
-[Any important context about this client]
+## История
+- YYYY-MM-DD: [первый контакт / как вышли]
+- YYYY-MM-DD: [веха]
+
+## Заметки
+[Контекст: особенности объекта, риски, кто принимает решение]

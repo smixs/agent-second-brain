@@ -478,3 +478,45 @@ def test_is_working_false_at_idle():
     from d_brain.services.tmux_parse import is_working
 
     assert not is_working("❯\n  ⏵⏵ bypass permissions on (shift+tab to cycle)\n")
+
+
+# ── rate-limit signature: spent vs advisory ─────────────────────────────
+
+ADVISORY_CAPTURE = """\
+  Approaching usage limit · resets at 5pm
+❯
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
+"""
+
+PERCENT_CAPTURE = """\
+  38% of the 5-hour limit used
+❯
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
+"""
+
+
+def test_advisory_limit_footer_is_not_a_rate_limit():
+    """Claude Code shows a heads-up footer while the session works fine.
+    The old pattern matched 'usage limit' and 'resets at' anywhere in the
+    chrome, so a perfectly healthy brain reported as rate limited — and
+    ask() then refused to type, which is what made the state stick."""
+    assert classify_state(ADVISORY_CAPTURE) == PaneState.READY
+    assert classify_state(PERCENT_CAPTURE) == PaneState.READY
+
+
+def test_spent_limit_is_still_detected():
+    assert classify_state(RATE_LIMIT_CAPTURE) == PaneState.RATE_LIMITED
+
+
+def test_rate_limit_banner_returns_the_line_for_parsing():
+    from d_brain.services.tmux_parse import rate_limit_banner
+
+    banner = rate_limit_banner(RATE_LIMIT_CAPTURE)
+    assert banner is not None
+    assert "resets at 3:00 PM" in banner
+
+
+def test_rate_limit_banner_ignores_advisory_lines():
+    from d_brain.services.tmux_parse import rate_limit_banner
+
+    assert rate_limit_banner(ADVISORY_CAPTURE) is None

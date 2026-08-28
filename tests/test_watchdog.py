@@ -13,13 +13,22 @@ from d_brain.services.watchdog import Watchdog
 
 class FakeSession:
     def __init__(
-        self, *, healthy=True, state=PaneState.READY, recover_ok=True, working=False
+        self,
+        *,
+        healthy=True,
+        state=PaneState.READY,
+        recover_ok=True,
+        working=False,
+        limit_active=True,
     ):
         self._healthy = healthy
         self.state = state
         self._recover_ok = recover_ok
         self.working = working
         self.recovered = 0
+        # Whether the RECORDED limit window still holds. False means the
+        # banner on screen has outlived its reset time.
+        self._limit_active = limit_active
 
     def is_healthy(self) -> bool:
         return self._healthy
@@ -29,6 +38,9 @@ class FakeSession:
 
     def is_working(self) -> bool:
         return self.working
+
+    def rate_limit_active(self) -> bool:
+        return self._limit_active
 
     def force_recover(self) -> bool:
         self.recovered += 1
@@ -70,11 +82,23 @@ def test_dead_session_is_recovered(tmp_path):
     assert alerts
 
 
-def test_rate_limited_is_not_killed(tmp_path):
-    sess = FakeSession(state=PaneState.RATE_LIMITED)
+def test_rate_limited_is_not_killed_while_the_window_holds(tmp_path):
+    sess = FakeSession(state=PaneState.RATE_LIMITED, limit_active=True)
     wd = make_wd(tmp_path, sess)
     assert wd.check_once() == "rate_limited"
     assert sess.recovered == 0
+
+
+def test_stale_rate_limit_banner_is_recovered(tmp_path):
+    """The sticky-status bug: the reset time has passed but the banner is
+    still on screen, so classify_state keeps saying RATE_LIMITED and ask()
+    refuses to type over it. Nothing but a recovery breaks that loop."""
+    sess = FakeSession(state=PaneState.RATE_LIMITED, limit_active=False)
+    alerts = []
+    wd = make_wd(tmp_path, sess, alerts=alerts)
+    assert wd.check_once() == "recovered_limit"
+    assert sess.recovered == 1
+    assert alerts
 
 
 def test_logged_out_alerts_without_restart(tmp_path):

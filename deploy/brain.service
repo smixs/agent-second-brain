@@ -1,0 +1,57 @@
+# Second brain — the only always-on unit.
+#
+# One process runs everything: Telegram polling, the scheduled-jobs ticker
+# and the session watchdog (supervised asyncio tasks, see bot/main.py). The
+# Claude Code brain itself lives in a detached tmux session that OUTLIVES
+# restarts of this unit.
+#
+# Install (user units, so tmux and ~/.claude auth belong to your user):
+#   mkdir -p ~/.config/systemd/user
+#   sed "s|%h/projects/dbrain|$PWD|g" deploy/brain.service \
+#       > ~/.config/systemd/user/brain.service
+#   systemctl --user daemon-reload
+#   loginctl enable-linger "$USER"      # survive logout / reboot
+#   systemctl --user enable --now brain.service
+
+[Unit]
+Description=Second brain (Telegram bot + Claude session + scheduler)
+After=network-online.target
+Wants=network-online.target
+# Crash-loop guard: 5 restarts per 5 min, then stop trying (and stay stopped
+# until reset-failed) — without it a broken .env restarts forever.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+# notify + WatchdogSec is what catches a FROZEN event loop: the bot pings
+# every WATCHDOG_USEC/2 (systemd_notify.py); miss the deadline and systemd
+# SIGABRTs it and Restart= brings it back. Type=simple could only ever
+# notice a process that actually exited.
+Type=notify
+WatchdogSec=180
+NotifyAccess=main
+
+# KillMode=process: stopping/restarting this unit must NOT kill the detached
+# tmux brain that lives in its cgroup. The brain survives; ensure_session
+# re-attaches to it on the next request.
+KillMode=process
+# A clean stop/restart exits 143 (SIGTERM) — success, not a failure.
+SuccessExitStatus=143 SIGTERM
+
+WorkingDirectory=%h/projects/dbrain
+ExecStart=%h/.local/bin/uv run python -m d_brain
+Restart=always
+RestartSec=10
+
+Environment=PYTHONUNBUFFERED=1
+Environment=CLAUDE_CONFIG_DIR=%h/.claude
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+# Resource guards for a small VPS. The brain (node) is the memory hog and
+# runs OUTSIDE this cgroup thanks to KillMode=process, so this caps the
+# python side only; raise it if you see OOM kills in the journal.
+MemoryMax=512M
+Nice=5
+
+[Install]
+WantedBy=default.target

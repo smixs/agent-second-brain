@@ -18,20 +18,21 @@ re-implement the migration by hand unless upgrade.sh itself cannot work.
 |---|---|---|
 | v1 (Dec 2025) | system-level `/etc/systemd/system/d-brain-bot.service`, `TODOIST_API_KEY` in .env, mcp-config.json | Todoist/MCP era, `claude -p` per message |
 | v2 | `d-brain-*` units, `claude -p`/`claude --print` pipeline, weekly timer | headless calls — dead after 2026-06-15 billing change |
-| v3.0 (target) | `dbrain-*` systemd **--user** units, persistent tmux brain, `~/.dbrain/` runtime dir, cron subsystem | interactive session on subscription |
+| v3.0 | `dbrain-*` systemd **--user** units (bot, watchdog, doctor, notify), persistent tmux brain, `~/.dbrain/` runtime dir | interactive session on subscription |
+| v3.1 (target) | ONE `brain.service` --user unit (polling + cron + watchdog in one process) plus `brain-daily.timer` | same session, one process, rate limit with an expiry |
 
 ## Diagnosis checklist (read-only first)
 
 ```bash
 # What's installed and running?
-systemctl --user list-units 'dbrain-*' --all
+systemctl --user list-units 'brain*' 'dbrain-*' --all
 sudo systemctl list-units 'd-brain-*' --all      # legacy system-level
 ls ~/.dbrain/ 2>/dev/null                         # runtime dir (v3)
 tmux ls 2>/dev/null                               # brain sessions
 git -C ~/projects/agent-second-brain log --oneline -3
 cat ~/projects/agent-second-brain/.env | grep -v 'TOKEN\|KEY'  # never print secrets
 claude auth status --json                         # needs "loggedIn": true
-journalctl --user -u dbrain-bot -n 50 --no-pager
+journalctl --user -u brain.service -n 50 --no-pager
 ```
 
 ## Repair rules
@@ -52,7 +53,7 @@ journalctl --user -u dbrain-bot -n 50 --no-pager
 
 ```bash
 bash scripts/check-no-claude-p.sh                 # guard clean
-systemctl --user is-active dbrain-bot dbrain-watchdog dbrain-process.timer dbrain-doctor.timer
+systemctl --user is-active brain.service brain-daily.timer
 uv run python -m d_brain.services.doctor          # ok=True
 cat ~/.dbrain/STATUS.md                            # state: healthy
 ```

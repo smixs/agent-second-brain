@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from croniter import croniter
@@ -146,10 +147,10 @@ class CronStore:
         except FileNotFoundError:
             # Also covers a concurrent quarantine-rename by another process.
             return []
-        except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as exc:
             # Keep the evidence, never wipe it: rename and start empty.
             quarantine = self.jobs_file.with_name(
-                f"jobs.json.corrupt-{int(time.time())}"
+                f"jobs.json.corrupt-{int(time.time())}-{uuid4().hex}"
             )
             try:
                 self.jobs_file.rename(quarantine)

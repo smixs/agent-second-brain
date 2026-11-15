@@ -79,13 +79,17 @@ class VaultStorage:
         time_str = timestamp.strftime("%H%M%S")
         # Telegram albums arrive as N messages within the same second —
         # uniquify so concurrent saves never overwrite each other.
-        filename = f"img-{time_str}.{extension}"
-        counter = 1
-        while (dir_path / filename).exists():
-            filename = f"img-{time_str}-{counter}.{extension}"
-            counter += 1
-        file_path = dir_path / filename
-
-        file_path.write_bytes(data)
+        counter = 0
+        while True:
+            suffix = f"-{counter}" if counter else ""
+            filename = f"img-{time_str}{suffix}.{extension}"
+            try:
+                # Exclusive creation reserves the name atomically across
+                # concurrent handlers and processes.
+                with (dir_path / filename).open("xb") as attachment:
+                    attachment.write(data)
+                break
+            except FileExistsError:
+                counter += 1
 
         return f"attachments/{day.isoformat()}/{filename}"

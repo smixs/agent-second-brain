@@ -5,7 +5,7 @@ Inspired by Clawdbot's session persistence pattern.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -92,14 +92,26 @@ class SessionStore:
         Returns:
             Dict with counts by entry type
         """
-        from datetime import timedelta
-
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
-        entries = self.get_recent(user_id, limit=1000)
-
+        cutoff = datetime.now().astimezone() - timedelta(days=days)
         stats: dict[str, int] = {}
-        for entry in entries:
-            if entry.get("ts", "") >= cutoff:
+        path = self._get_session_file(user_id)
+        try:
+            stream = path.open("r", encoding="utf-8")
+        except FileNotFoundError:
+            return stats
+        with stream:
+            for line in stream:
+                try:
+                    entry = json.loads(line)
+                    timestamp = datetime.fromisoformat(entry["ts"])
+                except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                    continue
+                # Older entries without an offset are local, matching the
+                # historical timestamp format used by this store.
+                if timestamp.tzinfo is None:
+                    timestamp = timestamp.astimezone()
+                if timestamp < cutoff:
+                    continue
                 entry_type = entry.get("type", "unknown")
                 stats[entry_type] = stats.get(entry_type, 0) + 1
 

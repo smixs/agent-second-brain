@@ -5,6 +5,7 @@ Inspired by Clawdbot's session persistence pattern.
 """
 
 import json
+from collections import deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -51,11 +52,13 @@ class SessionStore:
         Returns:
             List of session entries, most recent last
         """
+        if limit <= 0:
+            return []
         path = self._get_session_file(user_id)
         if not path.exists():
             return []
 
-        entries = []
+        entries: deque[dict] = deque(maxlen=limit)
         with path.open("r", encoding="utf-8") as f:
             for line in f:
                 if line.strip():
@@ -64,7 +67,7 @@ class SessionStore:
                     except json.JSONDecodeError:
                         continue  # Skip malformed lines
 
-        return entries[-limit:]
+        return list(entries)
 
     def get_today(self, user_id: int) -> list[dict]:
         """Get today's session entries.

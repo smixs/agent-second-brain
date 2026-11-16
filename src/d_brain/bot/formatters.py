@@ -130,6 +130,14 @@ def _truncate_html_consumed(text: str, max_length: int) -> tuple[str, int]:
         # We're in the middle of a tag, cut before it
         cut_point = last_open
 
+    # A sanitized entity may straddle the cut. Keep it whole so Telegram
+    # receives valid markup and the next chunk retains the original text.
+    last_amp = text.rfind("&", 0, cut_point)
+    if last_amp >= 0:
+        entity = re.match(r"&(amp|lt|gt|quot|#\d+|#x[0-9a-fA-F]+);", text[last_amp:])
+        if entity and last_amp + entity.end() > cut_point:
+            cut_point = last_amp
+
     truncated = text[:cut_point]
 
     # Close any open tags

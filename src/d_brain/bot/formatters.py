@@ -3,6 +3,7 @@
 import asyncio
 import html
 import re
+from html.parser import HTMLParser
 from typing import Any
 
 # Allowed HTML tags in Telegram
@@ -216,6 +217,17 @@ def format_empty_daily() -> str:
 MAX_RESPONSE_LENGTH = 4096
 
 
+class _PlainTextParser(HTMLParser):
+    """Extract text from sanitized Telegram HTML for the plain-text fallback."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data)
+
+
 async def send_response(bot: Any, chat_id: int, text: str) -> None:
     """Send a Claude reply: sanitize HTML, split to 4096-char chunks,
     fall back to plain text when Telegram rejects the markup."""
@@ -228,8 +240,12 @@ async def send_response(bot: Any, chat_id: int, text: str) -> None:
         try:
             await bot.send_message(chat_id, chunk)
         except Exception:
-            # Fallback: send without HTML
-            await bot.send_message(chat_id, chunk, parse_mode=None)
+            # Parse the sanitized fragment before sending without HTML, so users
+            # see readable text instead of markup and escaped entities.
+            parser = _PlainTextParser()
+            parser.feed(chunk)
+            parser.close()
+            await bot.send_message(chat_id, "".join(parser.parts), parse_mode=None)
         if i < len(chunks) - 1:
             await asyncio.sleep(0.3)
 
